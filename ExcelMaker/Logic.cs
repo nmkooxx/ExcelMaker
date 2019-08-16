@@ -117,9 +117,10 @@ public partial class MainForm {
             if (path.IndexOf('~') >= 0) {
                 continue;
             }
-            excelList.Items.Add(paths[i].Substring(offset));
+            string str = paths[i].Substring(offset);
+            excelList.Items.Add(str);
             //默认选中
-            excelList.SetItemChecked(i, true);
+            excelList.SetItemChecked(excelList.Items.Count - 1, true);
             m_excelPaths.Add(path);
         }
 
@@ -164,7 +165,14 @@ public partial class MainForm {
             File.WriteAllText(csvPath, m_csvBuilder.ToString());
 
             if (exportCode) {
-                CsvMaker.MakeCsvClass(codePath, csvName, m_headers, m_rawTypes, m_setting.importHeads);
+                if (type == 'C')
+                {
+                    CsvMaker.MakeCsvClass(codePath, csvName, m_headers, m_rawTypes, m_setting.importHeads);
+                }
+                else if(type == 'S')
+                {
+                    ServerCsvMaker.MakeCsvClass(codePath, csvName, m_headers, m_rawTypes, m_setting.importHeads);
+                }
             }
 
             if (m_defineIndex > 0 && m_defineBuilder.Length > 0) {
@@ -240,7 +248,7 @@ public partial class MainForm {
     private string m_defineName;
 
     private bool ReadExcel(string filePath, char type, Action headAction, Action<IRow> rowAction) {
-        using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read)) {
+        using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
             XSSFWorkbook workbook = new XSSFWorkbook(fs);
             //只读取第一张表
             ISheet sheet = workbook.GetSheetAt(0);
@@ -371,7 +379,7 @@ public partial class MainForm {
 
             int startIndex = 4;// sheet.FirstRowNum;
             int lastIndex = sheet.LastRowNum;
-            for (int index = startIndex; index < lastIndex; index++) {
+            for (int index = startIndex; index <= lastIndex; index++) {
                 IRow row = sheet.GetRow(index);
                 if (row == null) {
                     continue;
@@ -399,6 +407,27 @@ public partial class MainForm {
             }
         }
         return true;
+    }
+
+    /// <summary>
+    /// 将含有特殊符号的字符串包裹起来
+    /// 不支持Json格式的String[]
+    /// </summary>
+    /// <param name="rawString"></param>
+    /// <returns></returns>
+    private string packString(string rawString, bool force) {
+        string newString = rawString;
+        if (rawString.IndexOf(CsvConfig.quote) > 0) {
+            //在非第一个字符串中出现引号，则需要替换
+            newString = newString.Replace("\"", "\"\"");
+        }
+
+        if (force || rawString.IndexOf(CsvConfig.delimiter) > 0 ) {
+            //出现逗号分隔符，需要包裹
+            newString = string.Format("\"{0}\"", newString);
+        }
+
+        return newString;
     }
 
     private StringBuilder m_csvBuilder;
@@ -439,6 +468,8 @@ public partial class MainForm {
 
     private void rowToCsv(IRow row) {
         object value;
+        string cellType;
+        string info;
         CsvHeader header;
         for (int rank = 0; rank < m_headers.Length; rank++) {
             header = m_headers[rank];
@@ -454,8 +485,37 @@ public partial class MainForm {
                 continue;
             }
             value = getCellValue(cell);
-            if (value != null) {
-                m_csvBuilder.Append(value);
+            if (value == null) {
+                continue;
+            }
+            cellType = m_cellTypes[rank].ToLower();
+            switch (cellType) {
+                case "bool":
+                case "uint":
+                case "int":
+                case "ulong":
+                case "long":
+                case "float":
+                case "double":
+                    m_csvBuilder.Append(value);
+                    break;
+                case "string":
+                    m_csvBuilder.Append(packString(value.ToString(), false));
+                    break;
+                default:
+                    //对象结构需要引号包起来
+                    info = value.ToString();
+                    if (cell.CellType == CellType.String) {
+                        bool isJson = false;
+                        if (info.Length > 0 && (info[0] == '[' || info[0] == '{')) {
+                            isJson = true;
+                        }
+                        m_csvBuilder.Append(packString(info, isJson));
+                    }
+                    else {
+                        m_csvBuilder.Append(packString(info, false));
+                    }
+                    break;
             }
         }
         m_csvBuilder.Append("\n");

@@ -45,6 +45,8 @@
             this.input_clientCode = new System.Windows.Forms.TextBox();
             this.input_serverCode = new System.Windows.Forms.TextBox();
             this.check_clientCode = new System.Windows.Forms.CheckBox();
+            this.check_serverCode = new System.Windows.Forms.CheckBox();
+            this.label1 = new System.Windows.Forms.Label();
             this.group_serverExportType.SuspendLayout();
             this.group_clientExportType.SuspendLayout();
             this.SuspendLayout();
@@ -271,18 +273,40 @@
             // check_clientCode
             // 
             this.check_clientCode.AutoSize = true;
-            this.check_clientCode.Location = new System.Drawing.Point(136, 146);
+            this.check_clientCode.Location = new System.Drawing.Point(136, 145);
             this.check_clientCode.Name = "check_clientCode";
             this.check_clientCode.Size = new System.Drawing.Size(72, 16);
             this.check_clientCode.TabIndex = 26;
             this.check_clientCode.Text = "导出代码";
             this.check_clientCode.UseVisualStyleBackColor = true;
             // 
+            // check_serverCode
+            // 
+            this.check_serverCode.AutoSize = true;
+            this.check_serverCode.Location = new System.Drawing.Point(136, 75);
+            this.check_serverCode.Name = "check_serverCode";
+            this.check_serverCode.Size = new System.Drawing.Size(72, 16);
+            this.check_serverCode.TabIndex = 27;
+            this.check_serverCode.Text = "导出代码";
+            this.check_serverCode.UseVisualStyleBackColor = true;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.BackColor = System.Drawing.Color.CadetBlue;
+            this.label1.Location = new System.Drawing.Point(557, 180);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(185, 12);
+            this.label1.TabIndex = 28;
+            this.label1.Text = "注意：不支持Json格式的string[]";
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 882);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.check_serverCode);
             this.Controls.Add(this.check_clientCode);
             this.Controls.Add(this.input_serverCode);
             this.Controls.Add(this.input_clientCode);
@@ -338,5 +362,7 @@
     private System.Windows.Forms.TextBox input_clientCode;
     private System.Windows.Forms.TextBox input_serverCode;
     private System.Windows.Forms.CheckBox check_clientCode;
+    private System.Windows.Forms.CheckBox check_serverCode;
+    private System.Windows.Forms.Label label1;
 }
 

@@ -22,12 +22,12 @@ public partial class MainForm : Form {
 
     private void btn_exportServer_Click(object sender, EventArgs e) {
         export(m_config.serverPath, 'S', (ExportType)m_config.serverExportType, 
-            m_config.serverCodePath, check_clientCode.Checked);
+            m_config.serverCodePath, check_serverCode.Checked);
     }
 
     private void btn_exportClient_Click(object sender, EventArgs e) {
         export(m_config.clientPath, 'C', (ExportType)m_config.clientExportType, 
-            m_config.clientCodePath, false);
+            m_config.clientCodePath, check_clientCode.Checked);
     }
 
     private void input_root_TextChanged(object sender, EventArgs e) {
@@ -56,7 +56,7 @@ public partial class MainForm : Form {
 
     private void input_clientCode_TextChanged(object sender, EventArgs e) {
         TextBox textBox = sender as TextBox;
-        m_config.serverCodePath = textBox.Text;
+        m_config.clientCodePath = textBox.Text;
         writeConfig();
     }
 
