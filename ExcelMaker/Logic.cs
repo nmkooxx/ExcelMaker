@@ -147,6 +147,16 @@ public partial class MainForm {
     }
 
     private void exportCsv(string dirPath, char type, string codePath, bool exportCode) {
+        string localPath;
+        if (type == 'C') {
+            localPath = "client";
+        }
+        else {
+            localPath = "server";
+        }
+        if (!Directory.Exists(localPath)) {
+            Directory.CreateDirectory(localPath);
+        }
         if (!Directory.Exists(dirPath)) {
             Directory.CreateDirectory(dirPath);
         }
@@ -162,7 +172,11 @@ public partial class MainForm {
 
             string csvName = getFileName(m_filePath);
             string csvPath = Path.Combine(dirPath, csvName + ".csv");
-            File.WriteAllText(csvPath, m_csvBuilder.ToString());
+            string csvText = m_csvBuilder.ToString();
+            File.WriteAllText(csvPath, csvText);
+
+            string localCsvPath = Path.Combine(localPath, csvName + ".csv");
+            File.WriteAllText(localCsvPath, csvText);
 
             if (exportCode) {
                 if (type == 'C')
@@ -178,7 +192,7 @@ public partial class MainForm {
             if (m_defineIndex > 0 && m_defineBuilder.Length > 0) {
                 string className = m_defineName;
                 string definePath = Path.Combine(codePath, className + ".cs");
-                string defineClassStr = TemplateDefineClass.Replace("@className", className)
+                string defineClassStr = CsvMaker.TemplateDefineClass.Replace("@className", className)
                     .Replace("#property#", m_defineBuilder.ToString());
                 File.WriteAllText(definePath, defineClassStr);
             }
@@ -517,19 +531,12 @@ public partial class MainForm {
                     }
                     break;
             }
+            
         }
         m_csvBuilder.Append("\n");
 
         rowToDefine(row);
     }
-
-    static string TemplateDefineClass = @"public partial class @className {
-#property#
-}
-";
-
-    static string TemplateDefineField = @"
-    public const @type @name = @value;";
 
     private void rowToDefine(IRow row) {
         if (m_defineIndex <= 0) {
@@ -545,7 +552,7 @@ public partial class MainForm {
         }
 
         string type = m_cellTypes[0];
-        string template = TemplateDefineField.Replace("@type", type)
+        string template = CsvMaker.TemplateDefineField.Replace("@type", type)
                     .Replace("@name", value.ToString());
         if (type == "string") {
             template = template.Replace("@value", '"' + getCellValue(row.GetCell(0)).ToString() + '"');

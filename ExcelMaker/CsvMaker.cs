@@ -66,12 +66,12 @@ public partial class Csv {
         #endif 
     }";
 
-    static string TemplateDefineClass = @"public partial class @className {
+    public static string TemplateDefineClass = @"public partial class @className {
 #property#
 }
 ";
 
-    static string TemplateDefineField = @"
+    public static string TemplateDefineField = @"
     public const @type @name = @value;";
 
     static string mSuffixName = ".cs";
