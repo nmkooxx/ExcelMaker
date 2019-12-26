@@ -129,7 +129,7 @@ public class @classnameReader extends CsvLoader<@classKey, @classcsv> {
         return string.Format("List<{0}>", transType(typeName));
     }
 
-    public static void MakeCsvClass(string outPath, string fileCsv,
+    public static void MakeCsvClass(string outPaths, string fileCsv,
     CsvHeader[] headers, string[] typeStrs, string headerfile)
     {
         string classStr = TemplateClass;
@@ -257,14 +257,22 @@ public class @classnameReader extends CsvLoader<@classKey, @classcsv> {
         classStr = classStr.Replace("#NodeCase#", nodeBuilder.ToString());
 
         string fileName = className + mSuffixName;
-        string filePath = Path.Combine(outPath, fileName);
-        File.WriteAllText(filePath, classStr);
-        Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
+        string[] outPathArrray = outPaths.Split(';');
+        foreach (string outPath in outPathArrray)
+        {
+            if (!Directory.Exists(outPath))
+            {
+                Directory.CreateDirectory(outPath);
+            }
+            string filePath = Path.Combine(outPath, fileName);
+            File.WriteAllText(filePath, classStr);
+            Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
 
-        string raderClassStr = TemplateReader.Replace("@classname", fileCsvUpper).Replace("@classcsv", className).Replace("@classKey", classKey);
-        string readerFileName = fileCsvUpper + "Reader" + mSuffixName;
-        string readerFilePath = Path.Combine(outPath, readerFileName);
-        File.WriteAllText(readerFilePath, raderClassStr);
+            string raderClassStr = TemplateReader.Replace("@classname", fileCsvUpper).Replace("@classcsv", className).Replace("@classKey", classKey);
+            string readerFileName = fileCsvUpper + "Reader" + mSuffixName;
+            string readerFilePath = Path.Combine(outPath, readerFileName);
+            File.WriteAllText(readerFilePath, raderClassStr);
+        }
     }
 
     private static String initCap(String str)

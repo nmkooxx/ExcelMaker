@@ -17,6 +17,12 @@ public class Config {
     public string clientPath = "client";
     public string clientCodePath = "clientCode";
     public int clientExportType;
+    /// <summary>
+    /// 表名来源
+    /// 0 文件名中_分割的最后一个
+    /// 1 SheetName 
+    /// </summary>
+    public int nameSource = 0;
 }
 
 public class Combine {

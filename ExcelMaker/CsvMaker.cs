@@ -121,8 +121,8 @@ public partial class Csv {
         }
         return retTypeName;
     }
-
-    public static void MakeCsvClass(string outPath, string fileCsv, 
+    
+    public static void MakeCsvClass(string outPaths, string fileCsv, 
         CsvHeader[] headers, string[] typeStrs, string headerfile) {
         //string fileCsv = Path.GetFileNameWithoutExtension(file);
         string classStr = TemplateClass;
@@ -242,9 +242,17 @@ public partial class Csv {
         classStr = classStr.Replace("#NodeCase#", nodeBuilder.ToString());
 
         string fileName = className + mSuffixName;
-        string filePath = Path.Combine(outPath, fileName);
-        File.WriteAllText(filePath, classStr);
-        Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
+        string[] outPathArrray = outPaths.Split(';');
+        foreach (string outPath in outPathArrray)
+        {
+            if (!Directory.Exists(outPath))
+            {
+                Directory.CreateDirectory(outPath);
+            }
+            string filePath = Path.Combine(outPath, fileName);
+            File.WriteAllText(filePath, classStr);
+            Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
+        }
 
 //         if (defineFieldIndex > 0) {
 //             string defineClassStr = TemplateDefineClass;

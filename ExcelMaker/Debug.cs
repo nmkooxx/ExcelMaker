@@ -29,6 +29,8 @@ public static class Debug {
         m_panel.Controls.Clear();
         foreach (var item in m_logLabels) {
             item.Top = 0;
+            item.Text = string.Empty;
+            item.Height = 0;
         }
     }
 

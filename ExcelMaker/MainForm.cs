@@ -98,4 +98,10 @@ public partial class MainForm : Form {
     private void btn_clearLog_Click(object sender, EventArgs e) {
         Debug.Clear();
     }
+
+    private void check_useSheetName_CheckedChanged(object sender, EventArgs e) {
+        CheckBox check = sender as CheckBox;
+        m_config.nameSource = check.Checked ? 1 : 0;
+        writeConfig();
+    }
 }

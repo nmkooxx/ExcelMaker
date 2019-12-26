@@ -49,7 +49,6 @@ public partial class MainForm {
     }
 
     private Setting m_setting;
-    //private string m_configPath;
     private string m_settingPath = "ExcelMakerSetting.txt";
     private void readSetting() {
         if (File.Exists(m_settingPath)) {
@@ -57,11 +56,15 @@ public partial class MainForm {
             m_setting = JsonConvert.DeserializeObject<Setting>(text);
         }
         else {
-            m_setting = new Setting();            
+            m_setting = new Setting();
         }
     }
 
     private bool TryGetCombine(string name, out Combine combine) {
+        if (m_setting.combines == null) {
+            combine = null;
+            return false;
+        }
         for (int i = 0; i < m_setting.combines.Length; i++) {
             var cb = m_setting.combines[i];
             if (cb.name == name) {
@@ -71,6 +74,20 @@ public partial class MainForm {
         }
 
         combine = null;
+        return false;
+    }
+
+    private bool IsEnum(string name) {
+        if (m_setting.enumNames == null) {
+            return false;
+        }
+        for (int i = 0; i < m_setting.enumNames.Length; i++) {
+            var enumName = m_setting.enumNames[i];
+            if (enumName.Equals(name, StringComparison.OrdinalIgnoreCase)) {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -96,6 +113,8 @@ public partial class MainForm {
         input_serverCode.Text = m_config.serverCodePath;
         input_client.Text = m_config.clientPath;
         input_clientCode.Text = m_config.clientCodePath;
+
+        check_useSheetName.Checked = m_config.nameSource == 1;
     }
 
     private List<string> m_excelPaths = new List<string>(50);
@@ -105,9 +124,7 @@ public partial class MainForm {
             return;
         }
 
-        //m_excelPaths.Clear();
-        //var rootInfo = new DirectoryInfo(m_config.rootPath);
-
+        m_excelPaths.Clear();
         excelList.Items.Clear();
         //m_excelPaths = Directory.GetFiles(m_config.rootPath, "*.xls|*.xlsx", SearchOption.AllDirectories);
         int offset = m_config.rootPath.Length + 1;
@@ -141,12 +158,21 @@ public partial class MainForm {
     }
 
     private string getFileName(string filePath) {
-        int startPos = filePath.LastIndexOf('_');
-        int length = filePath.LastIndexOf('.') - startPos - 1;
-        return filePath.Substring(startPos + 1, length);
+        if (m_config.nameSource == 1) {
+            return m_sheetName;
+        }
+        DirectoryInfo directoryInfo = new DirectoryInfo(filePath);
+        string fileName = directoryInfo.Name;
+        string[] keys = fileName.Substring(0, fileName.Length - directoryInfo.Extension.Length).Split('_');
+        if (keys.Length == 2) {
+            return keys[0];
+        }
+        else {
+            return keys[keys.Length - 1];
+        }
     }
 
-    private void exportCsv(string dirPath, char type, string codePath, bool exportCode) {
+    private void exportCsv(string dirPaths, char type, string codePaths, bool exportCode) {
         string localPath;
         if (type == 'C') {
             localPath = "client";
@@ -157,44 +183,48 @@ public partial class MainForm {
         if (!Directory.Exists(localPath)) {
             Directory.CreateDirectory(localPath);
         }
-        if (!Directory.Exists(dirPath)) {
-            Directory.CreateDirectory(dirPath);
-        }
-        if (!Directory.Exists(codePath)) {
-            Directory.CreateDirectory(codePath);
-        }
         foreach (int index in excelList.CheckedIndices) {
             m_filePath = m_excelPaths[index];
             bool need = ReadExcel(m_filePath, type, initCsv, rowToCsv);
             if (!need) {
                 continue;
             }
-
-            string csvName = getFileName(m_filePath);
-            string csvPath = Path.Combine(dirPath, csvName + ".csv");
             string csvText = m_csvBuilder.ToString();
-            File.WriteAllText(csvPath, csvText);
+            string csvName = getFileName(m_filePath);
+            string[] dirPathArrray = dirPaths.Split(';');
+            foreach (string dirPath in dirPathArrray) {
+                if (!Directory.Exists(dirPath)) {
+                    Directory.CreateDirectory(dirPath);
+                }
+                string csvPath = Path.Combine(dirPath, csvName + ".csv");
+                File.WriteAllText(csvPath, csvText);
+                Debug.Log("导出Csv:" + csvPath);
+            }
 
             string localCsvPath = Path.Combine(localPath, csvName + ".csv");
             File.WriteAllText(localCsvPath, csvText);
 
             if (exportCode) {
-                if (type == 'C')
-                {
-                    CsvMaker.MakeCsvClass(codePath, csvName, m_headers, m_rawTypes, m_setting.importHeads);
+                if (type == 'C') {
+                    CsvMaker.MakeCsvClass(codePaths, csvName, m_headers, m_rawTypes, m_setting.importHeads);
                 }
-                else if(type == 'S')
-                {
-                    ServerCsvMaker.MakeCsvClass(codePath, csvName, m_headers, m_rawTypes, m_setting.importHeads);
+                else if (type == 'S') {
+                    ServerCsvMaker.MakeCsvClass(codePaths, csvName, m_headers, m_rawTypes, m_setting.importHeads);
                 }
             }
 
             if (m_defineIndex > 0 && m_defineBuilder.Length > 0) {
-                string className = m_defineName;
-                string definePath = Path.Combine(codePath, className + ".cs");
-                string defineClassStr = CsvMaker.TemplateDefineClass.Replace("@className", className)
-                    .Replace("#property#", m_defineBuilder.ToString());
-                File.WriteAllText(definePath, defineClassStr);
+                string[] codePathArrray = codePaths.Split(';');
+                foreach (string codePath in codePathArrray) {
+                    if (!Directory.Exists(codePath)) {
+                        Directory.CreateDirectory(codePath);
+                    }
+                    string className = m_defineName;
+                    string definePath = Path.Combine(codePath, className + ".cs");
+                    string defineClassStr = CsvMaker.TemplateDefineClass.Replace("@className", className)
+                        .Replace("#property#", m_defineBuilder.ToString());
+                    File.WriteAllText(definePath, defineClassStr);
+                }
             }
         }
         Debug.Log("导出Csv完成:" + type);
@@ -213,6 +243,8 @@ public partial class MainForm {
                 Directory.CreateDirectory(dirPath);
             }
             File.WriteAllText(path, JsonConvert.SerializeObject(m_jObject, m_jsonSettings));
+
+            Debug.Log("导出Json:" + path);
         }
         Debug.Log("导出Json完成:" + type);
     }
@@ -254,12 +286,15 @@ public partial class MainForm {
     }
 
     private string m_filePath;
+    private string m_sheetName;
     private CsvHeader[] m_headers;
     private CsvNode[] m_nodes;
     private string[] m_rawTypes;
     private string[] m_cellTypes;
     private int m_defineIndex;
     private string m_defineName;
+    private int m_curIndex;
+    private List<string> m_rawIds = new List<string>(1000);
 
     private bool ReadExcel(string filePath, char type, Action headAction, Action<IRow> rowAction) {
         using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
@@ -270,6 +305,7 @@ public partial class MainForm {
                 Debug.LogError("ReadExcel Error Sheet:" + filePath);
                 return false;
             }
+            m_sheetName = sheet.SheetName;
 
             //第一行为表头，必定是最大列数
             IRow nameRow = sheet.GetRow(0);
@@ -291,7 +327,7 @@ public partial class MainForm {
                 return false;
             }
 
-            Debug.Log("导出:" + filePath);
+            //Debug.Log("导出:" + filePath);
 
             string[] exportSettings = new string[cellCount];
             for (int i = 0; i < cellCount; i++) {
@@ -366,7 +402,7 @@ public partial class MainForm {
             for (int i = 0; i < m_headers.Length; i++) {
                 CsvHeader header = m_headers[i];
                 if (header.type == eFieldType.Primitive) {
-                    header.SetSlot(-1);                    
+                    header.SetSlot(-1);
                     continue;
                 }
                 slot = nodeSlots.IndexOf(header.baseName);
@@ -391,9 +427,11 @@ public partial class MainForm {
 
             headAction();
 
+            m_rawIds.Clear();
             int startIndex = 4;// sheet.FirstRowNum;
             int lastIndex = sheet.LastRowNum;
             for (int index = startIndex; index <= lastIndex; index++) {
+                m_curIndex = index;
                 IRow row = sheet.GetRow(index);
                 if (row == null) {
                     continue;
@@ -408,15 +446,22 @@ public partial class MainForm {
                 if (obj == null) {
                     continue;
                 }
-                if (obj.ToString()[0] == CsvConfig.skipFlag) {
+                string id = obj.ToString();
+                if (string.IsNullOrEmpty(id) || id[0] == CsvConfig.skipFlag) {
                     continue;
                 }
+
+                if (m_rawIds.IndexOf(id) >= 0) {
+                    Debug.LogError(m_filePath + " 重复id, index：" + index + " id:" + id);
+                    continue;
+                }
+                m_rawIds.Add(id);
 
                 try {
                     rowAction(row);
                 }
                 catch (Exception e) {
-                    Debug.LogError(m_filePath + " 转换错误, id：" + obj + " \n" + e);
+                    Debug.LogError(m_filePath + " 转换错误, index：" + index + " info:" + obj + " \n" + e);
                 }
             }
         }
@@ -436,7 +481,7 @@ public partial class MainForm {
             newString = newString.Replace("\"", "\"\"");
         }
 
-        if (force || rawString.IndexOf(CsvConfig.delimiter) > 0 ) {
+        if (force || rawString.IndexOf(CsvConfig.delimiter) > 0) {
             //出现逗号分隔符，需要包裹
             newString = string.Format("\"{0}\"", newString);
         }
@@ -460,17 +505,17 @@ public partial class MainForm {
         m_csvBuilder.Append("\n");
 
         //读取代码导出由Unity改为本工具后，不再需要类型信息
-//         m_csvBuilder.Append(m_rawTypes[0]);
-//         for (int i = 1; i < m_rawTypes.Length; i++) {
-//             var header = m_headers[i];
-//             if (header.skip) {
-//                 continue;
-//             }
-//             var rawType = m_rawTypes[i];
-//             m_csvBuilder.Append(CsvConfig.delimiter);
-//             m_csvBuilder.Append(rawType);
-//         }
-//         m_csvBuilder.Append("\n");
+        //         m_csvBuilder.Append(m_rawTypes[0]);
+        //         for (int i = 1; i < m_rawTypes.Length; i++) {
+        //             var header = m_headers[i];
+        //             if (header.skip) {
+        //                 continue;
+        //             }
+        //             var rawType = m_rawTypes[i];
+        //             m_csvBuilder.Append(CsvConfig.delimiter);
+        //             m_csvBuilder.Append(rawType);
+        //         }
+        //         m_csvBuilder.Append("\n");
 
         if (m_defineIndex > 0) {
             m_defineBuilder = new StringBuilder();
@@ -502,8 +547,11 @@ public partial class MainForm {
             if (value == null) {
                 continue;
             }
-            cellType = m_cellTypes[rank].ToLower();
-            switch (cellType) {
+            cellType = m_cellTypes[rank];
+            if (string.IsNullOrEmpty(cellType)) {
+                continue;
+            }
+            switch (cellType.ToLower()) {
                 case "bool":
                 case "uint":
                 case "int":
@@ -511,6 +559,10 @@ public partial class MainForm {
                 case "long":
                 case "float":
                 case "double":
+                case "fixed":
+                    if (value is string) {
+                        Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    }
                     m_csvBuilder.Append(value);
                     break;
                 case "string":
@@ -519,19 +571,33 @@ public partial class MainForm {
                 default:
                     //对象结构需要引号包起来
                     info = value.ToString();
+                    if (info.Length <= 0) {
+                        Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        break;
+                    }
                     if (cell.CellType == CellType.String) {
                         bool isJson = false;
-                        if (info.Length > 0 && (info[0] == '[' || info[0] == '{')) {
+                        char frist = info[0];
+                        char last = info[info.Length - 1];
+                        if ((frist == '[' && last == ']') || (frist == '{' && last == '}')) {
                             isJson = true;
+                        }
+                        else {
+                            if (!IsEnum(cellType) && header.subs == null) {
+                                Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                            }
                         }
                         m_csvBuilder.Append(packString(info, isJson));
                     }
                     else {
+                        if (!IsEnum(cellType) && header.subs == null) {
+                            Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        }
                         m_csvBuilder.Append(packString(info, false));
                     }
                     break;
             }
-            
+
         }
         m_csvBuilder.Append("\n");
 

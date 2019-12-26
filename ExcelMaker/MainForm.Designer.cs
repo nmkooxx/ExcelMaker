@@ -47,6 +47,7 @@
             this.check_clientCode = new System.Windows.Forms.CheckBox();
             this.check_serverCode = new System.Windows.Forms.CheckBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.check_useSheetName = new System.Windows.Forms.CheckBox();
             this.group_serverExportType.SuspendLayout();
             this.group_clientExportType.SuspendLayout();
             this.SuspendLayout();
@@ -82,7 +83,7 @@
             // 
             this.input_server.Location = new System.Drawing.Point(78, 37);
             this.input_server.Name = "input_server";
-            this.input_server.Size = new System.Drawing.Size(473, 21);
+            this.input_server.Size = new System.Drawing.Size(448, 21);
             this.input_server.TabIndex = 6;
             this.input_server.TextChanged += new System.EventHandler(this.input_server_TextChanged);
             // 
@@ -99,7 +100,7 @@
             // 
             this.input_client.Location = new System.Drawing.Point(78, 107);
             this.input_client.Name = "input_client";
-            this.input_client.Size = new System.Drawing.Size(473, 21);
+            this.input_client.Size = new System.Drawing.Size(448, 21);
             this.input_client.TabIndex = 8;
             this.input_client.TextChanged += new System.EventHandler(this.input_client_TextChanged);
             // 
@@ -256,17 +257,17 @@
             // 
             // input_clientCode
             // 
-            this.input_clientCode.Location = new System.Drawing.Point(557, 107);
+            this.input_clientCode.Location = new System.Drawing.Point(532, 107);
             this.input_clientCode.Name = "input_clientCode";
-            this.input_clientCode.Size = new System.Drawing.Size(218, 21);
+            this.input_clientCode.Size = new System.Drawing.Size(243, 21);
             this.input_clientCode.TabIndex = 24;
             this.input_clientCode.TextChanged += new System.EventHandler(this.input_clientCode_TextChanged);
             // 
             // input_serverCode
             // 
-            this.input_serverCode.Location = new System.Drawing.Point(557, 37);
+            this.input_serverCode.Location = new System.Drawing.Point(532, 37);
             this.input_serverCode.Name = "input_serverCode";
-            this.input_serverCode.Size = new System.Drawing.Size(218, 21);
+            this.input_serverCode.Size = new System.Drawing.Size(243, 21);
             this.input_serverCode.TabIndex = 25;
             this.input_serverCode.TextChanged += new System.EventHandler(this.input_serverCode_TextChanged);
             // 
@@ -300,11 +301,23 @@
             this.label1.TabIndex = 28;
             this.label1.Text = "注意：不支持Json格式的string[]";
             // 
+            // check_useSheetName
+            // 
+            this.check_useSheetName.AutoSize = true;
+            this.check_useSheetName.Location = new System.Drawing.Point(219, 177);
+            this.check_useSheetName.Name = "check_useSheetName";
+            this.check_useSheetName.Size = new System.Drawing.Size(138, 16);
+            this.check_useSheetName.TabIndex = 29;
+            this.check_useSheetName.Text = "使用SheetName为类名";
+            this.check_useSheetName.UseVisualStyleBackColor = true;
+            this.check_useSheetName.CheckedChanged += new System.EventHandler(this.check_useSheetName_CheckedChanged);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 882);
+            this.Controls.Add(this.check_useSheetName);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.check_serverCode);
             this.Controls.Add(this.check_clientCode);
@@ -364,5 +377,6 @@
     private System.Windows.Forms.CheckBox check_clientCode;
     private System.Windows.Forms.CheckBox check_serverCode;
     private System.Windows.Forms.Label label1;
+    private System.Windows.Forms.CheckBox check_useSheetName;
 }
 
