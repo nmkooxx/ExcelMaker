@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 public partial class MainForm {
@@ -190,6 +191,7 @@ public partial class MainForm {
                 continue;
             }
             string csvText = m_csvBuilder.ToString();
+            csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
             string csvName = getFileName(m_filePath);
             string[] dirPathArrray = dirPaths.Split(';');
             foreach (string dirPath in dirPathArrray) {
@@ -213,7 +215,7 @@ public partial class MainForm {
                 }
             }
 
-            if (m_defineIndex > 0 && m_defineBuilder.Length > 0) {
+            if (m_defineIndex > 0 && m_defineBuilder.Length > 0 && type == 'C') {
                 string[] codePathArrray = codePaths.Split(';');
                 foreach (string codePath in codePathArrray) {
                     if (!Directory.Exists(codePath)) {
@@ -223,6 +225,7 @@ public partial class MainForm {
                     string definePath = Path.Combine(codePath, className + ".cs");
                     string defineClassStr = CsvMaker.TemplateDefineClass.Replace("@className", className)
                         .Replace("#property#", m_defineBuilder.ToString());
+                    defineClassStr = Regex.Replace(defineClassStr, "(?<!\r)\n|\r\n", "\n");
                     File.WriteAllText(definePath, defineClassStr);
                 }
             }
@@ -242,7 +245,9 @@ public partial class MainForm {
             if (!Directory.Exists(dirPath)) {
                 Directory.CreateDirectory(dirPath);
             }
-            File.WriteAllText(path, JsonConvert.SerializeObject(m_jObject, m_jsonSettings));
+            string text = JsonConvert.SerializeObject(m_jObject, m_jsonSettings);
+            text = Regex.Replace(text, "(?<!\r)\n|\r\n", "\n");
+            File.WriteAllText(path, text);
 
             Debug.Log("导出Json:" + path);
         }

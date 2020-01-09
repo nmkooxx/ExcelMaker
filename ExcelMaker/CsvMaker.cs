@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 
 public class CsvMaker {
     static string TemplateClass = @"using System;
@@ -241,6 +242,8 @@ public partial class Csv {
         classStr = classStr.Replace("#BaseCase#", simpleBuilder.ToString());
         classStr = classStr.Replace("#NodeCase#", nodeBuilder.ToString());
 
+        classStr = Regex.Replace(classStr, "(?<!\r)\n|\r\n", "\n");
+
         string fileName = className + mSuffixName;
         string[] outPathArrray = outPaths.Split(';');
         foreach (string outPath in outPathArrray)
@@ -253,40 +256,6 @@ public partial class Csv {
             File.WriteAllText(filePath, classStr);
             Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
         }
-
-//         if (defineFieldIndex > 0) {
-//             string defineClassStr = TemplateDefineClass;
-//             string defineFieldStr = TemplateDefineField;
-//             string defineTypeStr = typeStrs[0].Substring(1);
-// 
-//             propertyBuilder = new StringBuilder();
-// 
-//             string[] record = parser.Read();
-//             while (record != null && record.Length > defineFieldIndex) {
-//                 if (record[0][0] == CsvConfig.skipFlag || string.IsNullOrEmpty(record[defineFieldIndex])) {
-//                     record = parser.Read();
-//                     continue;
-//                 }
-// 
-//                 string template = defineFieldStr.Replace("@type", defineTypeStr)
-//                     .Replace("@name", record[defineFieldIndex]);
-//                 if (defineTypeStr == "string") {
-//                     template = template.Replace("@value", '"' + record[0] + '"');
-//                 }
-//                 else {
-//                     template = template.Replace("@value", record[0]);
-//                 }
-//                 propertyBuilder.Append(template);
-// 
-//                 record = parser.Read();
-//             }
-// 
-//             className = headers[defineFieldIndex].name;
-//             fileName = className + mSuffixName;
-//             defineClassStr = defineClassStr.Replace("@className", className);
-//             defineClassStr = defineClassStr.Replace("#property#", propertyBuilder.ToString());
-//             File.WriteAllText(outPath + fileName, defineClassStr);
-//         }
     }
 
 }
