@@ -16,6 +16,7 @@ public partial class MainForm {
     private void init() {
         readConfig();
         readSetting();
+        readExtend();
 
         initUI();
 
@@ -61,6 +62,47 @@ public partial class MainForm {
         }
     }
 
+    private void writeSetting() {
+        string text = JsonConvert.SerializeObject(m_setting, m_jsonSettings);
+        File.WriteAllText(m_settingPath, text);
+    }
+
+    private string m_extendPath = "ExcelMakerExtend";
+    //language -> place -> file -> info
+    private Dictionary<string, Dictionary<string, Dictionary<string, string>>> m_extends;
+    private void readExtend() {
+        if (!Directory.Exists(m_extendPath)) {
+            return;
+        }
+        var root = new DirectoryInfo(m_extendPath);
+        var dirs = root.GetDirectories();
+        m_extends = new Dictionary<string, Dictionary<string, Dictionary<string, string>>>(dirs.Length);
+        for (int i = 0; i < dirs.Length; i++) {
+            var dir = dirs[i];
+            var subDirs = dir.GetDirectories();
+            if (subDirs.Length == 0) {
+                continue;
+            }
+            var languageExtends = new Dictionary<string, Dictionary<string, string>>(subDirs.Length);
+            m_extends[dir.Name] = languageExtends;
+            for (int j = 0; j < subDirs.Length; j++) {
+                var subDir = subDirs[j];
+                var files = subDir.GetFiles();
+                if (files.Length == 0) {
+                    continue;
+                }
+                var keyExtends = new Dictionary<string, string>(files.Length);
+                languageExtends[subDir.Name] = keyExtends;
+                for (int k = 0; k < files.Length; k++) {
+                    var file = files[k];
+                    var info = File.ReadAllText(file.FullName);
+                    string fileName = file.Name.Substring(0, file.Name.Length - file.Extension.Length);
+                    keyExtends[fileName] = info;
+                }
+            }
+        }
+    }
+
     private bool TryGetCombine(string name, out Combine combine) {
         if (m_setting.combines == null) {
             combine = null;
@@ -78,24 +120,51 @@ public partial class MainForm {
         return false;
     }
 
-    private bool IsEnum(string name) {
-        if (m_setting.enumNames == null) {
+    private bool TryGetExtend(string language, string key, string fileName, out string extend) {
+        extend = null;
+        if (m_extends == null) {
             return false;
         }
-        for (int i = 0; i < m_setting.enumNames.Length; i++) {
-            var enumName = m_setting.enumNames[i];
-            if (enumName.Equals(name, StringComparison.OrdinalIgnoreCase)) {
-                return true;
-            }
+        Dictionary<string, Dictionary<string, string>> languageExtends;
+        if (!m_extends.TryGetValue(language, out languageExtends)) {
+            return false;
+        }
+        Dictionary<string, string> keyExtends;
+        if (!languageExtends.TryGetValue(key, out keyExtends)) {
+            return false;
         }
 
-        return false;
+        return keyExtends.TryGetValue(fileName, out extend);
+    }
+
+    private bool IsEnum(string name) {
+        Header header;
+        switch (s_exportLanguage) {
+            case ExportLanguage.CSharp:
+                if (CsvMaker_CSharp.TryGetHeader(name, out header)) {
+                    return header.isEnum;
+                }
+                return false;
+            case ExportLanguage.Java:
+                if (CsvMaker_Java.TryGetHeader(name, out header)) {
+                    return header.isEnum;
+                }
+                return false;
+            case ExportLanguage.TypeScript:
+                if (CsvMaker_TypeScript.TryGetHeader(name, out header)) {
+                    return header.isEnum;
+                }
+                return false;
+            default:
+                Debug.LogError("IsEnum error exportLanguage:" + s_exportLanguage);
+                return false;
+        }
     }
 
     private void initUI() {
         foreach (var item in group_serverExportType.Controls) {
             var radioButton = item as RadioButton;
-            if (radioButton.TabIndex == m_config.serverExportType) {
+            if (radioButton.TabIndex == m_setting.serverExportType) {
                 radioButton.Checked = true;
                 break;
             }
@@ -103,7 +172,7 @@ public partial class MainForm {
 
         foreach (var item in group_clientExportType.Controls) {
             var radioButton = item as RadioButton;
-            if (radioButton.TabIndex == m_config.clientExportType) {
+            if (radioButton.TabIndex == m_setting.clientExportType) {
                 radioButton.Checked = true;
                 break;
             }
@@ -115,7 +184,7 @@ public partial class MainForm {
         input_client.Text = m_config.clientPath;
         input_clientCode.Text = m_config.clientCodePath;
 
-        check_useSheetName.Checked = m_config.nameSource == 1;
+        check_useSheetName.Checked = m_setting.nameSource == 1;
     }
 
     private List<string> m_excelPaths = new List<string>(50);
@@ -145,7 +214,9 @@ public partial class MainForm {
         Debug.Log("路径扫描完成，总计文件个数：" + m_excelPaths.Count);
     }
 
-    private void export(string dirPath, char type, ExportType exportType, string codePath, bool exportCode) {
+    private static ExportLanguage s_exportLanguage;
+    private void export(string dirPath, char type, ExportType exportType, ExportLanguage language, string codePath, bool exportCode) {
+        s_exportLanguage = language;
         switch (exportType) {
             case ExportType.Csv:
                 exportCsv(dirPath, type, codePath, exportCode);
@@ -159,7 +230,7 @@ public partial class MainForm {
     }
 
     private string getFileName(string filePath) {
-        if (m_config.nameSource == 1) {
+        if (m_setting.nameSource == 1) {
             return m_sheetName;
         }
         DirectoryInfo directoryInfo = new DirectoryInfo(filePath);
@@ -184,6 +255,12 @@ public partial class MainForm {
         if (!Directory.Exists(localPath)) {
             Directory.CreateDirectory(localPath);
         }
+        if (exportCode && s_exportLanguage == ExportLanguage.TypeScript) {
+            CsvMaker_TypeScript.InitCatalog();
+        }
+        string headExtend;
+        string csvExtend;
+        string readerExtend;
         foreach (int index in excelList.CheckedIndices) {
             m_filePath = m_excelPaths[index];
             bool need = ReadExcel(m_filePath, type, initCsv, rowToCsv);
@@ -207,27 +284,53 @@ public partial class MainForm {
             File.WriteAllText(localCsvPath, csvText);
 
             if (exportCode) {
-                if (type == 'C') {
-                    CsvMaker.MakeCsvClass(codePaths, csvName, m_headers, m_rawTypes, m_setting.importHeads);
-                }
-                else if (type == 'S') {
-                    ServerCsvMaker.MakeCsvClass(codePaths, csvName, m_headers, m_rawTypes, m_setting.importHeads);
+                switch (s_exportLanguage) {
+                    case ExportLanguage.CSharp:
+                        CsvMaker_CSharp.MakeCsvClass(codePaths, csvName, m_headers, m_rawTypes);
+                        break;
+                    case ExportLanguage.Java:
+                        CsvMaker_Java.MakeCsvClass(codePaths, csvName, m_headers, m_rawTypes);
+                        break;
+                    case ExportLanguage.TypeScript:
+                        CsvMaker_TypeScript.AddCatalog(csvName);
+                        TryGetExtend("TypeScript", "extendHead", csvName, out headExtend);
+                        TryGetExtend("TypeScript", "extendCsv", csvName, out csvExtend);
+                        TryGetExtend("TypeScript", "extendReader", csvName, out readerExtend);
+                        CsvMaker_TypeScript.MakeCsvClass(codePaths, csvName, m_headers, m_rawTypes, headExtend, csvExtend, readerExtend);
+                        break;
+                    default:
+                        break;
                 }
             }
-
-            if (m_defineIndex > 0 && m_defineBuilder.Length > 0 && type == 'C') {
+            if (m_defineIndex > 0) {
                 string[] codePathArrray = codePaths.Split(';');
                 foreach (string codePath in codePathArrray) {
                     if (!Directory.Exists(codePath)) {
                         Directory.CreateDirectory(codePath);
                     }
-                    string className = m_defineName;
-                    string definePath = Path.Combine(codePath, className + ".cs");
-                    string defineClassStr = CsvMaker.TemplateDefineClass.Replace("@className", className)
-                        .Replace("#property#", m_defineBuilder.ToString());
-                    defineClassStr = Regex.Replace(defineClassStr, "(?<!\r)\n|\r\n", "\n");
-                    File.WriteAllText(definePath, defineClassStr);
+                    switch (s_exportLanguage) {
+                        case ExportLanguage.CSharp:
+                            CsvMaker_CSharp.MakeCsvDefine(codePath, m_defineName);
+                            break;
+                        case ExportLanguage.Java:
+                            CsvMaker_Java.MakeCsvDefine(codePath, m_defineName);
+                            break;
+                        case ExportLanguage.TypeScript:
+                            CsvMaker_TypeScript.MakeCsvDefine(codePath, m_defineName);
+                            break;
+                        default:
+                            break;
+                    }
                 }
+            }
+        }
+        if (exportCode && s_exportLanguage == ExportLanguage.TypeScript) {
+            string[] codePathArrray = codePaths.Split(';');
+            foreach (string codePath in codePathArrray) {
+                if (!Directory.Exists(codePath)) {
+                    Directory.CreateDirectory(codePath);
+                }
+                CsvMaker_TypeScript.MakeCatalog(codePath);
             }
         }
         Debug.Log("导出Csv完成:" + type);
@@ -260,7 +363,7 @@ public partial class MainForm {
             case CellType.Blank:
                 return null;
             case CellType.Numeric:
-                //对时间格式（2015.12.5、2015/12/5、2015-12-5等）的处理 
+                //对时间格式（2015.12.5、2015/12/5、2015-12-5等）的处理
                 if (format == 14 || format == 31 || format == 57 || format == 58) {
                     return cell.DateCellValue;
                 }
@@ -301,7 +404,7 @@ public partial class MainForm {
     private int m_curIndex;
     private List<string> m_rawIds = new List<string>(1000);
 
-    private bool ReadExcel(string filePath, char type, Action headAction, Action<IRow> rowAction) {
+    private bool ReadExcel(string filePath, char type, Action headAction, Action<char, IRow> rowAction) {
         using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
             XSSFWorkbook workbook = new XSSFWorkbook(fs);
             //只读取第一张表
@@ -400,6 +503,12 @@ public partial class MainForm {
                 }
 
                 m_headers[i] = CsvHeader.Pop(cell.StringCellValue);
+                if (m_headers[i].type == eFieldType.Array && cellType.Length > 2
+                    && cellType.EndsWith("[]", StringComparison.OrdinalIgnoreCase)
+                    && m_headers[i].name == m_headers[i].baseName) {
+                    //去除结尾的[]
+                    m_cellTypes[i] = cellType.Substring(0, cellType.Length - 2);
+                }
             }
             int slot;
             List<string> nodeSlots = new List<string>(1);
@@ -463,7 +572,7 @@ public partial class MainForm {
                 m_rawIds.Add(id);
 
                 try {
-                    rowAction(row);
+                    rowAction(type, row);
                 }
                 catch (Exception e) {
                     Debug.LogError(m_filePath + " 转换错误, index：" + index + " info:" + obj + " \n" + e);
@@ -495,7 +604,6 @@ public partial class MainForm {
     }
 
     private StringBuilder m_csvBuilder;
-    private StringBuilder m_defineBuilder;
     private void initCsv() {
         m_csvBuilder = new StringBuilder();
         m_csvBuilder.Append(m_headers[0].name);
@@ -522,15 +630,22 @@ public partial class MainForm {
         //         }
         //         m_csvBuilder.Append("\n");
 
-        if (m_defineIndex > 0) {
-            m_defineBuilder = new StringBuilder();
-        }
-        else {
-            m_defineBuilder = null;
+        switch (s_exportLanguage) {
+            case ExportLanguage.CSharp:
+                CsvMaker_CSharp.InitCsvDefine();
+                break;
+            case ExportLanguage.Java:
+                CsvMaker_Java.InitCsvDefine();
+                break;
+            case ExportLanguage.TypeScript:
+                CsvMaker_TypeScript.InitCsvDefine();
+                break;
+            default:
+                break;
         }
     }
 
-    private void rowToCsv(IRow row) {
+    private void rowToCsv(char type, IRow row) {
         object value;
         string cellType;
         string info;
@@ -566,7 +681,7 @@ public partial class MainForm {
                 case "double":
                 case "fixed":
                     if (value is string) {
-                        Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        Debug.LogError(m_filePath + " 基础格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                     m_csvBuilder.Append(value);
                     break;
@@ -577,7 +692,7 @@ public partial class MainForm {
                     //对象结构需要引号包起来
                     info = value.ToString();
                     if (info.Length <= 0) {
-                        Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                         break;
                     }
                     if (cell.CellType == CellType.String) {
@@ -586,17 +701,24 @@ public partial class MainForm {
                         char last = info[info.Length - 1];
                         if ((frist == '[' && last == ']') || (frist == '{' && last == '}')) {
                             isJson = true;
+                            //检查Json格式
+                            try {
+                                var obj = JsonConvert.DeserializeObject(info);
+                            }
+                            catch (Exception e) {
+                                Debug.LogError(m_filePath + " Json格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                            }
                         }
                         else {
                             if (!IsEnum(cellType) && header.subs == null) {
-                                Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                                Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                             }
                         }
                         m_csvBuilder.Append(packString(info, isJson));
                     }
                     else {
                         if (!IsEnum(cellType) && header.subs == null) {
-                            Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                            Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                         }
                         m_csvBuilder.Append(packString(info, false));
                     }
@@ -622,16 +744,20 @@ public partial class MainForm {
             return;
         }
 
-        string type = m_cellTypes[0];
-        string template = CsvMaker.TemplateDefineField.Replace("@type", type)
-                    .Replace("@name", value.ToString());
-        if (type == "string") {
-            template = template.Replace("@value", '"' + getCellValue(row.GetCell(0)).ToString() + '"');
+        string valueType = m_cellTypes[0];
+        switch (s_exportLanguage) {
+            case ExportLanguage.CSharp:
+                CsvMaker_CSharp.AddCsvDefine(valueType, value, getCellValue(row.GetCell(0)));
+                break;
+            case ExportLanguage.Java:
+                CsvMaker_Java.AddCsvDefine(valueType, value, getCellValue(row.GetCell(0)));
+                break;
+            case ExportLanguage.TypeScript:
+                CsvMaker_TypeScript.AddCsvDefine(valueType, value, getCellValue(row.GetCell(0)));
+                break;
+            default:
+                break;
         }
-        else {
-            template = template.Replace("@value", getCellValue(row.GetCell(0)).ToString());
-        }
-        m_defineBuilder.Append(template);
     }
 
 
@@ -646,12 +772,13 @@ public partial class MainForm {
         m_jObject = new JObject();
     }
 
-    private void rowToJson(IRow row) {
+    private void rowToJson(char type, IRow row) {
         object value;
         JToken token;
         string cellType;
         CsvHeader header;
         CsvNode node;
+        string info;
         JObject csv = new JObject();
         for (int rank = 0; rank < m_headers.Length; rank++) {
             header = m_headers[rank];
@@ -689,7 +816,36 @@ public partial class MainForm {
                     token = JToken.FromObject(value);
                     break;
                 default:
-                    token = JToken.Parse((string)value);
+                    info = value.ToString();
+                    if (info.Length <= 0) {
+                        Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        continue;
+                    }
+                    if (cell.CellType == CellType.String) {
+                        bool isJson = false;
+                        char frist = info[0];
+                        char last = info[info.Length - 1];
+                        if ((frist == '[' && last == ']') || (frist == '{' && last == '}')) {
+                            isJson = true;
+                        }
+                        else {
+                            if (!IsEnum(cellType) && header.subs == null) {
+                                Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                            }
+                        }
+                        if (isJson) {
+                            token = JToken.Parse(info);
+                        }
+                        else {
+                            token = JToken.FromObject(value);
+                        }
+                    }
+                    else {
+                        if (!IsEnum(cellType) && header.subs == null) {
+                            Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        }
+                        token = JToken.FromObject(Convert.ToInt32(value));
+                    }
                     break;
             }
 
@@ -725,7 +881,7 @@ public partial class MainForm {
                 csv.Add(node.name, subObj);
             }
             else {
-                csv.Add(node.name, node.ToJToken());
+                csv.Add(node.name, token);
             }
 
             //重置node，以便下一条使用

@@ -1,0 +1,158 @@
+一个技能由1~N个技能动作组成，一个技能动作可以释放出0~N个子弹产生伤害
+
+一个主角的普攻必须留出5个连续的id
+	1.是基础普攻
+	2.是触发连续普攻，是1的无动作版本
+	3.斜向弹道
+	4.左右弹道
+	5.后向弹道
+
+
+Skill 技能总表
+	填写技能类型，AI释放信息，CD，消耗，伤害，对目标/自己附加的buff， 预警信息
+
+	技能总表id = 技能id * 10 + 技能等级-1
+	技能等级预留10级，不支持大于10级的技能
+	
+	eSkill 	技能类型
+		Normal	1	普攻
+		Skill	2	技能
+		Incur	3	触发
+
+	eCast	技能释放操作类型
+		None		0	直接释放
+		Dir			1	指定方向
+		Pos			2	指定释放点，AI操作选择的点就是目标位置，距离不会超过castDist
+		Target		3	指定目标，有目标时为目标当前位置，没有时当前朝向*castDist的偏移点，距离不会超过castDist
+		MultiTarget 4	多个目标(未实现)
+		RandDir		5	随机方向		
+			
+	Cost	技能消耗，不填无消耗，支持同时消耗多种类型
+		key		消耗类型 eKey
+			支持Hp,Mp,Ap
+			Hp消耗不致死
+		couple	消耗数值,[基础值Int，百分比Fixed]
+			
+		如：Mp,[20,100] 表示消耗魔法值【MpMax * 0.1 + 20】点
+		
+	SkillEffect	技能效果，按每段依次填写，必须填写之前的字段才会读取后面那个
+		hurt	伤害数据，支持同时多种伤害类型
+			key		伤害类型 eKey
+				支持PhyAtk,MagicAtk,TrueAtk
+			couple	伤害数值,[基础值Int，百分比Fixed]
+				如： PhyAtk	[20,1200] 表示物理攻击为 人物属性物攻 * 1.2 + 20 点
+
+		hitBuffs	对目标附加的buff ids
+		arlet		预警显示配置			
+	
+SkillAct 技能动作表
+	填写技能动作表现，特效，音效，镜头震动，弹道，子弹id
+	动作支持最多10段，技能动作id有技能总表id * 10开始
+	
+	aimCamp 目标阵营，eAimCamp，按二进制位填写
+		None	0	无效目标
+		Enemy	1	敌方
+		Self	2	己方
+		Team	4	队友方（暂无）
+		Neutral	8	中立方（暂无）
+	
+	如： 3 表示同时对敌我双方起效
+	
+	aimType	目标类型，eActor，按二进制位填写（暂无）
+		None	0	全体类型
+		Player	1	玩家
+		Pet		2	宠物
+		Monster	4	怪物
+		Summon	8	召唤物
+		Npc		16	
+		
+	castSet	发射设置，eCastSet,按二进制位填写
+		None			0	无
+		Hold			1	持续施法，动作被打断则技能中断，子弹回收（正常技能在伤害延迟结束前被打断才会回收子弹，自后的不会回收）
+		SkipNext		2	本段为纯弹道，无动作，技能动作播放时跳过本行，等上一行的子弹结束时再执行
+		NoBulletExtra	4	不支持弹道加强
+		BulletOverSkill 8	弹道完成结束技能，如：机器人的拉可以飞1秒，但是0.5秒命中后进入拉回阶段，拉回的时间是根据子弹拉回速度决定的
+		MissOverSkill	16	未命中时结束技能，如：机器人的拉，未命中时不会有拖拽阶段
+		MissSkip 		32	未命中时无后续弹道，如：命中后爆炸，未命中则直接消失
+		
+	ballistics	弹道，eBallistics，填string
+		None		原地不动
+		Bind		绑定施法者移动
+		RayOut		直线飞出
+		RayBack		直线飞出，时间到达后返回释放者,每次命中增加1/4的飞行时间
+		Track		追踪,原地不动，在seekRadius圆内找到敌人后，自动朝向敌人飞行
+		SemiTrack	半自动追踪,直线飞出时，在seekRadius圆内找到敌人后，朝向敌人飞行，但是最多旋转angularOffset°，旋转角度根据acc变化
+		Rotate		自转
+		RotateAround	围绕施法者旋转, angularOffset初始角度偏移，expandSpeed离心速度
+		RotateTrack	旋转追踪,没找到敌人前围绕施法者旋转，找到后同追踪效果, angularOffset初始角度偏移
+		Twirl		漩涡，围绕指定点旋转, angularOffset初始角度偏移，expandSpeed离心速度
+		Parabola	抛物线
+		Blink		瞬移
+		OutRange	超出范围结束，如闪电链接
+		
+	actSet	动作设置，eActSet,按二进制位填写
+		None		0	无
+		Hide		1	隐藏模型
+		Cross		2	穿越敌人(默认技能冲刺会在敌人面前停下)
+		FreeMove	4	技能中可以自由移动，如旋风斩
+		UnBreak		8	不可打断
+		Impunity	16	不受伤害
+		Power		32	蓄力，等待玩家输入
+		FaceTo 		64	面向敌人，用于技能改变人物朝向，如暗黑2里的炮轰
+		Correspond	128	多目标锁定时一一对应，多余子弹会取消，默认当10个子弹对应2个敌人时，会被轮流打中5次
+		NoHitSound 	256	屏蔽受击音效
+		NoHitCv		512	屏蔽受击喊叫
+		
+
+	hitSpan	
+	hitSpanGap		伤害分段，一个伤害拆分成多次显示
+	
+Bullet 子弹表
+	填写子弹大小、形状，起始位置，角度，速度，打击次数等纯子弹信息
+	
+	castOffset	发射位置偏移
+	castAngle	发射角度
+	castMax		发射数量，当位置与角度小于数量时，会轮流使用
+	
+	castStart、castEnd	起始点方式	结束点方式，eCastKind，填string
+		None		相对位置
+		Target		目标位置
+		MultiTarget	多个目标位置，需要技能释放方式为多目标
+		Pos			根据技能释放方式决定的释放位置
+						指定Pos、Target为当时目标的位置，其他为释放技能时释放者的位置
+					纯弹道技能为激发子弹的位置
+					
+		Summon		召唤，召唤配置填在Skill表的伤害字段中
+						key为id，couple为[角色id, 存在时间]
+						其他属性根据会couple[无效数据，百分比Fixed]算出一个千分比值，召唤物的攻防属性会乘以该值（需要那些属性可以讨论）
+						
+		Mirror		镜像，镜像配置填在Skill表的伤害字段中
+						key为id，couple为[AI的id, 存在时间]
+						其他属性会根据会couple[基础值int，百分比Fixed]来设置镜像属性，没填的与来源属性完全一致
+						清除除了死亡保留的其他Buff
+		
+		Mark		标记定位,子弹会被保存下来，供之后使用，技能id填在Skill表的伤害字段中，key为id
+						如诡术妖姬的闪现返回，仙女龙的幻象法球,霞的飞羽返回
+					
+		RandDir		随机方向
+		Encircle	环形随机，半径seekRadius
+		InsideCircle	圆内随机，半径seekRadius
+		
+		
+	bulletSet	子弹设置，eBulletSet，按二进制位填写
+		None		0	无
+		Attract 	1	击退效果为吸引向释放者
+		PierceActor 2	子弹穿透人物
+		PierceWall 	4	穿透墙壁
+		BounceActor 8	弹射人物
+		BounceWall 	16	弹射墙壁
+	
+	
+	range	范围，eRange
+		None	0	无效目标
+		Point	1	单点，	半径width 											只与锁定目标碰撞，需要配合锁定弹道，锁定释放方式使用
+		Rect	2	矩形，	宽width，长length，length>0轴心在中间,<0轴心在底部	优先使用更高效的胶囊形
+		Capsule	3	胶囊形，半径width，长length，开始角度=0竖向,90横向			
+		Cycl	4	圆形	半径width
+		Annulus	5	圆环	内径width 外径length
+		Arc		6	圆弧	内径width 外径length 开始角度 结束角度				角度范围-360~360，需要保证开始角度<结束角度

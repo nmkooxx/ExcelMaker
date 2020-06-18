@@ -9,20 +9,18 @@ public enum ExportType {
     Json,
 }
 
+public enum ExportLanguage {
+    CSharp,
+    Java,
+    TypeScript,
+}
+
 public class Config {
     public string rootPath = "excel";
     public string serverPath = "server";
     public string serverCodePath = "serverCode";
-    public int serverExportType = 1;
     public string clientPath = "client";
     public string clientCodePath = "clientCode";
-    public int clientExportType;
-    /// <summary>
-    /// 表名来源
-    /// 0 文件名中_分割的最后一个
-    /// 1 SheetName 
-    /// </summary>
-    public int nameSource = 0;
 }
 
 public class Combine {
@@ -41,13 +39,22 @@ public class Combine {
 }
 
 public class Setting {
+    public int serverExportType = 1;
+    public int serverLanguage = 1;
+    public int clientExportType;
+    public int clientLanguage = 0;
+    /// <summary>
+    /// 表名来源
+    /// 0 文件名中_分割的最后一个
+    /// 1 SheetName
+    /// </summary>
+    public int nameSource = 0;
+
     public Combine[] combines;
-    /// <summary>
-    /// 枚举保存为字符串
-    /// </summary>
-    public string[] enumNames;
-    /// <summary>
-    /// 导入头文件
-    /// </summary>
-    public string importHeads;
+}
+
+public class Header {
+    public string name;
+    public string path;
+    public bool isEnum;
 }

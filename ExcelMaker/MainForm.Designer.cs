@@ -51,26 +51,26 @@
             this.group_serverExportType.SuspendLayout();
             this.group_clientExportType.SuspendLayout();
             this.SuspendLayout();
-            // 
+            //
             // title_root
-            // 
+            //
             this.title_root.AutoSize = true;
             this.title_root.Location = new System.Drawing.Point(13, 14);
             this.title_root.Name = "title_root";
             this.title_root.Size = new System.Drawing.Size(59, 12);
             this.title_root.TabIndex = 0;
             this.title_root.Text = "Excel目录";
-            // 
+            //
             // input_root
-            // 
+            //
             this.input_root.Location = new System.Drawing.Point(78, 10);
             this.input_root.Name = "input_root";
             this.input_root.Size = new System.Drawing.Size(550, 21);
             this.input_root.TabIndex = 1;
             this.input_root.TextChanged += new System.EventHandler(this.input_root_TextChanged);
-            // 
+            //
             // btn_exportServer
-            // 
+            //
             this.btn_exportServer.Location = new System.Drawing.Point(656, 72);
             this.btn_exportServer.Name = "btn_exportServer";
             this.btn_exportServer.Size = new System.Drawing.Size(119, 23);
@@ -78,43 +78,43 @@
             this.btn_exportServer.Text = "导出到服务器";
             this.btn_exportServer.UseVisualStyleBackColor = true;
             this.btn_exportServer.Click += new System.EventHandler(this.btn_exportServer_Click);
-            // 
+            //
             // input_server
-            // 
+            //
             this.input_server.Location = new System.Drawing.Point(78, 37);
             this.input_server.Name = "input_server";
             this.input_server.Size = new System.Drawing.Size(448, 21);
             this.input_server.TabIndex = 6;
             this.input_server.TextChanged += new System.EventHandler(this.input_server_TextChanged);
-            // 
+            //
             // label2
-            // 
+            //
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(13, 41);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(65, 12);
             this.label2.TabIndex = 5;
             this.label2.Text = "服务器目录";
-            // 
+            //
             // input_client
-            // 
+            //
             this.input_client.Location = new System.Drawing.Point(78, 107);
             this.input_client.Name = "input_client";
             this.input_client.Size = new System.Drawing.Size(448, 21);
             this.input_client.TabIndex = 8;
             this.input_client.TextChanged += new System.EventHandler(this.input_client_TextChanged);
-            // 
+            //
             // label3
-            // 
+            //
             this.label3.AutoSize = true;
             this.label3.Location = new System.Drawing.Point(13, 111);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(65, 12);
             this.label3.TabIndex = 7;
             this.label3.Text = "客户端目录";
-            // 
+            //
             // btn_exportClient
-            // 
+            //
             this.btn_exportClient.Location = new System.Drawing.Point(656, 141);
             this.btn_exportClient.Name = "btn_exportClient";
             this.btn_exportClient.Size = new System.Drawing.Size(119, 23);
@@ -122,9 +122,9 @@
             this.btn_exportClient.Text = "导出到客户端";
             this.btn_exportClient.UseVisualStyleBackColor = true;
             this.btn_exportClient.Click += new System.EventHandler(this.btn_exportClient_Click);
-            // 
+            //
             // btn_selectAll
-            // 
+            //
             this.btn_selectAll.Location = new System.Drawing.Point(15, 173);
             this.btn_selectAll.Name = "btn_selectAll";
             this.btn_selectAll.Size = new System.Drawing.Size(75, 23);
@@ -132,9 +132,9 @@
             this.btn_selectAll.Text = "全选";
             this.btn_selectAll.UseVisualStyleBackColor = true;
             this.btn_selectAll.Click += new System.EventHandler(this.btn_selectAll_Click);
-            // 
+            //
             // btn_selectInversion
-            // 
+            //
             this.btn_selectInversion.Location = new System.Drawing.Point(100, 173);
             this.btn_selectInversion.Name = "btn_selectInversion";
             this.btn_selectInversion.Size = new System.Drawing.Size(75, 23);
@@ -142,9 +142,9 @@
             this.btn_selectInversion.Text = "反选";
             this.btn_selectInversion.UseVisualStyleBackColor = true;
             this.btn_selectInversion.Click += new System.EventHandler(this.btn_selectInversion_Click);
-            // 
+            //
             // btn_scan
-            // 
+            //
             this.btn_scan.Location = new System.Drawing.Point(656, 10);
             this.btn_scan.Name = "btn_scan";
             this.btn_scan.Size = new System.Drawing.Size(119, 23);
@@ -152,29 +152,29 @@
             this.btn_scan.Text = "重新扫描";
             this.btn_scan.UseVisualStyleBackColor = true;
             this.btn_scan.Click += new System.EventHandler(this.btn_scan_Click);
-            // 
+            //
             // panel_log
-            // 
+            //
             this.panel_log.AutoScroll = true;
             this.panel_log.AutoScrollMinSize = new System.Drawing.Size(20, 0);
-            this.panel_log.Location = new System.Drawing.Point(476, 202);
+            this.panel_log.Location = new System.Drawing.Point(624, 202);
             this.panel_log.Name = "panel_log";
-            this.panel_log.Size = new System.Drawing.Size(312, 676);
+            this.panel_log.Size = new System.Drawing.Size(543, 754);
             this.panel_log.TabIndex = 19;
-            // 
+            //
             // excelList
-            // 
+            //
             this.excelList.CheckOnClick = true;
             this.excelList.ColumnWidth = 420;
             this.excelList.FormattingEnabled = true;
             this.excelList.Location = new System.Drawing.Point(13, 202);
             this.excelList.MultiColumn = true;
             this.excelList.Name = "excelList";
-            this.excelList.Size = new System.Drawing.Size(457, 676);
+            this.excelList.Size = new System.Drawing.Size(605, 756);
             this.excelList.TabIndex = 20;
-            // 
+            //
             // group_serverExportType
-            // 
+            //
             this.group_serverExportType.Controls.Add(this.radio_serverExportType_1);
             this.group_serverExportType.Controls.Add(this.radio_serverExportType_2);
             this.group_serverExportType.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
@@ -184,9 +184,9 @@
             this.group_serverExportType.TabIndex = 21;
             this.group_serverExportType.TabStop = false;
             this.group_serverExportType.Text = "导出格式";
-            // 
+            //
             // radio_serverExportType_1
-            // 
+            //
             this.radio_serverExportType_1.AutoSize = true;
             this.radio_serverExportType_1.Location = new System.Drawing.Point(33, 11);
             this.radio_serverExportType_1.Name = "radio_serverExportType_1";
@@ -196,9 +196,9 @@
             this.radio_serverExportType_1.Text = "csv";
             this.radio_serverExportType_1.UseVisualStyleBackColor = true;
             this.radio_serverExportType_1.CheckedChanged += new System.EventHandler(this.radio_serverExportType_CheckedChanged);
-            // 
+            //
             // radio_serverExportType_2
-            // 
+            //
             this.radio_serverExportType_2.AutoSize = true;
             this.radio_serverExportType_2.Location = new System.Drawing.Point(98, 11);
             this.radio_serverExportType_2.Name = "radio_serverExportType_2";
@@ -208,9 +208,9 @@
             this.radio_serverExportType_2.Text = "json";
             this.radio_serverExportType_2.UseVisualStyleBackColor = true;
             this.radio_serverExportType_2.CheckedChanged += new System.EventHandler(this.radio_serverExportType_CheckedChanged);
-            // 
+            //
             // group_clientExportType
-            // 
+            //
             this.group_clientExportType.Controls.Add(this.radio_clientExportType_1);
             this.group_clientExportType.Controls.Add(this.radio_clientExportType_2);
             this.group_clientExportType.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
@@ -220,9 +220,9 @@
             this.group_clientExportType.TabIndex = 22;
             this.group_clientExportType.TabStop = false;
             this.group_clientExportType.Text = "导出格式";
-            // 
+            //
             // radio_clientExportType_1
-            // 
+            //
             this.radio_clientExportType_1.AutoSize = true;
             this.radio_clientExportType_1.Location = new System.Drawing.Point(33, 11);
             this.radio_clientExportType_1.Name = "radio_clientExportType_1";
@@ -232,9 +232,9 @@
             this.radio_clientExportType_1.Text = "csv";
             this.radio_clientExportType_1.UseVisualStyleBackColor = true;
             this.radio_clientExportType_1.CheckedChanged += new System.EventHandler(this.radio_clientExportType_CheckedChanged);
-            // 
+            //
             // radio_clientExportType_2
-            // 
+            //
             this.radio_clientExportType_2.AutoSize = true;
             this.radio_clientExportType_2.Location = new System.Drawing.Point(98, 11);
             this.radio_clientExportType_2.Name = "radio_clientExportType_2";
@@ -244,35 +244,35 @@
             this.radio_clientExportType_2.Text = "json";
             this.radio_clientExportType_2.UseVisualStyleBackColor = true;
             this.radio_clientExportType_2.CheckedChanged += new System.EventHandler(this.radio_clientExportType_CheckedChanged);
-            // 
+            //
             // btn_clearLog
-            // 
-            this.btn_clearLog.Location = new System.Drawing.Point(476, 175);
+            //
+            this.btn_clearLog.Location = new System.Drawing.Point(623, 175);
             this.btn_clearLog.Name = "btn_clearLog";
             this.btn_clearLog.Size = new System.Drawing.Size(75, 23);
             this.btn_clearLog.TabIndex = 23;
             this.btn_clearLog.Text = "清空日志";
             this.btn_clearLog.UseVisualStyleBackColor = true;
             this.btn_clearLog.Click += new System.EventHandler(this.btn_clearLog_Click);
-            // 
+            //
             // input_clientCode
-            // 
+            //
             this.input_clientCode.Location = new System.Drawing.Point(532, 107);
             this.input_clientCode.Name = "input_clientCode";
-            this.input_clientCode.Size = new System.Drawing.Size(243, 21);
+            this.input_clientCode.Size = new System.Drawing.Size(495, 21);
             this.input_clientCode.TabIndex = 24;
             this.input_clientCode.TextChanged += new System.EventHandler(this.input_clientCode_TextChanged);
-            // 
+            //
             // input_serverCode
-            // 
+            //
             this.input_serverCode.Location = new System.Drawing.Point(532, 37);
             this.input_serverCode.Name = "input_serverCode";
-            this.input_serverCode.Size = new System.Drawing.Size(243, 21);
+            this.input_serverCode.Size = new System.Drawing.Size(495, 21);
             this.input_serverCode.TabIndex = 25;
             this.input_serverCode.TextChanged += new System.EventHandler(this.input_serverCode_TextChanged);
-            // 
+            //
             // check_clientCode
-            // 
+            //
             this.check_clientCode.AutoSize = true;
             this.check_clientCode.Location = new System.Drawing.Point(136, 145);
             this.check_clientCode.Name = "check_clientCode";
@@ -280,9 +280,9 @@
             this.check_clientCode.TabIndex = 26;
             this.check_clientCode.Text = "导出代码";
             this.check_clientCode.UseVisualStyleBackColor = true;
-            // 
+            //
             // check_serverCode
-            // 
+            //
             this.check_serverCode.AutoSize = true;
             this.check_serverCode.Location = new System.Drawing.Point(136, 75);
             this.check_serverCode.Name = "check_serverCode";
@@ -290,19 +290,19 @@
             this.check_serverCode.TabIndex = 27;
             this.check_serverCode.Text = "导出代码";
             this.check_serverCode.UseVisualStyleBackColor = true;
-            // 
+            //
             // label1
-            // 
+            //
             this.label1.AutoSize = true;
             this.label1.BackColor = System.Drawing.Color.CadetBlue;
-            this.label1.Location = new System.Drawing.Point(557, 180);
+            this.label1.Location = new System.Drawing.Point(704, 180);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(185, 12);
             this.label1.TabIndex = 28;
             this.label1.Text = "注意：不支持Json格式的string[]";
-            // 
+            //
             // check_useSheetName
-            // 
+            //
             this.check_useSheetName.AutoSize = true;
             this.check_useSheetName.Location = new System.Drawing.Point(219, 177);
             this.check_useSheetName.Name = "check_useSheetName";
@@ -311,12 +311,12 @@
             this.check_useSheetName.Text = "使用SheetName为类名";
             this.check_useSheetName.UseVisualStyleBackColor = true;
             this.check_useSheetName.CheckedChanged += new System.EventHandler(this.check_useSheetName_CheckedChanged);
-            // 
+            //
             // MainForm
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 882);
+            this.ClientSize = new System.Drawing.Size(1177, 968);
             this.Controls.Add(this.check_useSheetName);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.check_serverCode);

@@ -1,0 +1,220 @@
+Buff按kind种类作为唯一id保存
+	同kind，不同id的buff添加时，按prior大的替换prior小的
+	同kind，同id的buff添加时，刷新持续时间，来源者，按堆叠上限刷新堆叠数			
+	不同kind的buff同时存在
+	
+Buff按occur来检查生效
+    不填None	添加时直接激活
+    Time	时间激活(ms)
+    Skill	释放技能后激活
+    Attack	攻击命中
+    Hit		受击命中
+    Kill	击杀
+    Die		死亡,死亡触发的效果必须在死亡表现结束前完成才有效
+    Dispel	Buff被驱散时
+    Timeout	Buff超时结束时
+	
+	检测的时机后支持不同的条件，多个条件是与的关系，有一个不满足就会不执行
+		1.优先检查主条件，
+		2.判断是否免疫该Buff
+		3.判断几率，0~1万
+		4.判断冷却，毫秒
+		5.判断需检查次数
+		
+		
+	term主条件有以下几种：
+		Hurt	累计伤害判断（只支持【Attack】【Hit】这2个检查时机）
+			在【Attack】中为累计造成伤害
+			在【Hit】中为累计受到伤害
+			
+			subTerm支持None和人物属性值
+			value 为正数表示伤害>=该值时有效，负数表示<=该值的绝对值时有效
+				与人物属性比较时，伤害值会先扩大一千倍
+				人物属性暂时只支持取自己的属性
+			
+			如：Hit Hurt HpMax 50 表示受到伤害大于自己生命上限的5%时生效			
+		
+		Skill	技能判断（不支持【None】【Time】【Timeout】这3种检查时机）
+			subTerm支持
+				None	无条件 
+				Id		技能id 		技能id由kind * 10 + lv组成，value为正数表示>=时有效，负数表示<=该值的绝对值时有效
+				Type	技能类型 	value为正数表示=有效，负数表示不!=该值的绝对值时有效
+				Lv		技能等级 	value为正数表示>=时有效，负数表示<=该值的绝对值时有效
+				Tag 	Tags列表	value 为正数表示相等或包含时有效，负数表示不相等或不包含该值的绝对值时有效
+			
+				
+		Gap		间隔时间（只支持【Time】这1个检查时机）
+			value	填间隔毫秒数
+		
+		Buff	增益判断
+			subTerm支持
+				Id		指定id的buff 	value为正数表示存在buff的piror>=时有效，负数表示不存在或者prior<=该值的绝对值时有效
+				Type	buff类型 		value为正数表示存在该type有效，负数表示不存在该type的绝对值时有效
+				Kind	指教Kind的buff	value为正数表示存在该kind有效，负数表示不存在该kind的绝对值时有效
+				Tag 	Tags列表		value为正数表示相等或包含时有效，负数表示不相等或不包含该值的绝对值时有效
+				Status	异常状态列表	value为正数表示存在该state有效，负数表示不存在该state的绝对值时有效，具体状态列表见eBuffState说明
+		
+		人物属性判断，具体属性类型见属性说明
+			
+			如：Attack Hp HpMax -500	表示命中时自己的生命值小于等于50%生效
+		
+
+Buff影响
+	affectSource 	影响来源 0自己，1别人
+	affectTarget	影响对象 0自己，1别人
+	
+	formula	公式 
+		0: 	value = basics + t * multi
+			t = 根据affect.to从source中取属性
+
+		1: 	value = basics + f0 * multi
+			f0 = 根据affect.form_1从source中取属性
+
+		2:	value = basics + t * f0 * multi
+			t = 根据affect.to从source中取属性
+			f0 = 根据affect.form_1从source中取属性
+			//如生命每损失1%，攻击力提高2%
+
+		3:	value = basics + t * (f0 - f1) * multi
+			t = 根据affect.to从source中取属性
+			f0 = 根据affect.form_1从source中取属性
+			f1 = 根据affect.form_2从target中取属性
+			//如根据自己与目标的力量差增加伤害
+        
+        20：value = basics + t * f0 * multi
+			t = 根据affect.to从target中取属性
+			f0 = 根据affect.form_1从source中取属性
+			//如根据攻击力，生命降低n%
+            
+	堆叠影响倍率 
+		ratio = stackTimes * stackBasis + (stackTimes * (stackTimes + 1) * stackAddit / 2)
+		
+	最终数值	
+		result = value * ratio
+	
+Buff影响效果
+	Hurt		立即生效的数值改变
+		to支持
+			----------------------------
+			Hurt 		总伤害（只支持【Attack】【Hit】这2个检查时机）
+			PhyHurt		物攻伤害（只支持【Attack】【Hit】这2个检查时机）
+			MagicHurt	魔攻伤害（只支持【Attack】【Hit】这2个检查时机）
+			TrueHurt	真实伤害（只支持【Attack】【Hit】这2个检查时机）
+				
+			----------------------------
+			Hp		当前生命值
+			Mp		当前魔法值
+			Ap		当前怒气
+			
+	如：affectSource, affectTarget, affect, formula, to, 	form_1,	form_2, basics, multi
+		0,				0,			Hurt,	0,		 Hurt,	,		,		100,	1500 	表示总伤害增加[原伤害*1.5 + 100]点
+		0,				0,			Hurt,	0,		 Hp,	Hurt,	,		0,		500		表示吸收伤害的50%恢复生命
+			
+	
+	Bonus		持续存在的属性改变
+		影响来源，影响对象只支持自己
+		
+	如：affect, formula, to,	form_1,	form_2, basics, multi
+		Bonus,	1,		 PhyAtk, HpMax,	,		10,		500 	表示物攻增加[生命上限*0.5 + 10]点
+		Bonus,	0,		 HpMax,	 ,		，		0,		500		表示生命上限增加[生命上限*0.5 + 0]点 	
+	
+    ChangeCd	改变CD
+		to支持
+			Skill	技能
+				form支持
+					Id		basics不含等级的技能id		multi正数增加cd，负数减少cd
+					Type	basics技能类型				multi正数增加cd，负数减少cd
+					Tag		basics标签					multi正数增加cd，负数减少cd
+					None	任意技能					multi正数增加cd，负数减少cd
+			
+			Buff	buff
+				预留，还没开放
+
+    Dispel		驱散Buff
+		from支持
+			Kind	basics增益的kind
+			Type	basics增益的类型
+			Tag		basics标签
+			None	任意增益
+	
+    Incur		激活
+		to支持
+			Attack	连续普攻
+					basics普攻序号，固定0	multi延迟秒数
+					堆叠层决定普攻等级
+					连续普攻id为普攻id+1
+					
+			Skill	技能
+				form支持
+					Id		技能id（含等级） = 	basics + 堆叠层 -1
+					Offset	bbasics普攻序号，固定0	
+							multi技能Id的偏移
+							堆叠层决定普攻等级
+			
+			Buff	buff
+				form支持
+					Id		增益id = basics + 堆叠层 -1
+				
+	
+    State		增加状态
+		影响来源，影响对象只支持自己
+		basics 状态id
+
+			Impunity	1 	无敌
+			NoHit 		2	无受击动作
+			NoMove		3 	禁止移动
+			NoAnim 		4 	暂停动画,晕眩
+			Taunt 		5 	嘲讽
+			Escape 		6 	恐惧
+			Invisible 	7	隐身
+			NoView 		8	失明
+
+    Skill		技能增强
+		影响来源，影响对象只支持自己
+		
+		from支持
+			Id		技能id（不含等级）
+			Type	
+			Tag
+			None
+		
+		to支持
+			Stack		冷却完成堆叠数
+			Bullet		子弹id
+			Times		释放次数
+			Lv			技能等级
+			HitTimes	子弹打击次数
+			BulletSet	子弹设置，（穿透，弹射等）具体设置见技能说明
+			
+
+    Immunity	免疫
+		影响来源，影响对象只支持自己
+		to支持
+			Skill	技能，同技能条件判断
+				form支持
+					Id		技能id（含等级）
+					Type	
+					Tag
+					Piror	优先级
+					Lv
+					None
+			
+			Buff	增益，同buff条件判断
+				form支持
+					Id		
+					Kind
+					Type
+					Tag
+					Piror
+				
+
+    Silence		技能沉默
+		影响来源，影响对象只支持自己
+		form支持，同免疫技能
+
+    Morph		变身
+		影响来源，影响对象只支持自己
+		预留
+	
+	
+

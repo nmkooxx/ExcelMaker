@@ -21,12 +21,12 @@ public partial class MainForm : Form {
 	}
 
     private void btn_exportServer_Click(object sender, EventArgs e) {
-        export(m_config.serverPath, 'S', (ExportType)m_config.serverExportType, 
+        export(m_config.serverPath, 'S', (ExportType)m_setting.serverExportType, (ExportLanguage)m_setting.serverLanguage,
             m_config.serverCodePath, check_serverCode.Checked);
     }
 
     private void btn_exportClient_Click(object sender, EventArgs e) {
-        export(m_config.clientPath, 'C', (ExportType)m_config.clientExportType, 
+        export(m_config.clientPath, 'C', (ExportType)m_setting.clientExportType, (ExportLanguage)m_setting.clientLanguage,
             m_config.clientCodePath, check_clientCode.Checked);
     }
 
@@ -80,8 +80,8 @@ public partial class MainForm : Form {
     private void radio_clientExportType_CheckedChanged(object sender, EventArgs e) {
         RadioButton radioButton = sender as RadioButton;
         if (radioButton.Checked) {
-            m_config.clientExportType = radioButton.TabIndex;
-            writeConfig();
+            m_setting.clientExportType = radioButton.TabIndex;
+            writeSetting();
             //Debug.LogInfo("clientExportType:" + (ExportType)m_config.clientExportType);
         }
     }
@@ -89,8 +89,8 @@ public partial class MainForm : Form {
     private void radio_serverExportType_CheckedChanged(object sender, EventArgs e) {
         RadioButton radioButton = sender as RadioButton;
         if (radioButton.Checked) {
-            m_config.serverExportType = radioButton.TabIndex;
-            writeConfig();
+            m_setting.serverExportType = radioButton.TabIndex;
+            writeSetting();
             //Debug.LogInfo("serverExportType:" + (ExportType)m_config.serverExportType);
         }
     }
@@ -101,7 +101,7 @@ public partial class MainForm : Form {
 
     private void check_useSheetName_CheckedChanged(object sender, EventArgs e) {
         CheckBox check = sender as CheckBox;
-        m_config.nameSource = check.Checked ? 1 : 0;
-        writeConfig();
+        m_setting.nameSource = check.Checked ? 1 : 0;
+        writeSetting();
     }
 }

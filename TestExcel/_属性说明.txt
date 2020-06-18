@@ -1,0 +1,82 @@
+人物属性	枚举eKey ---		用于Buff属性加成，条件判断，影响目标，技能消耗，伤害计算
+	主属性
+
+	二级属性	
+		HpMax	生命最大值
+		MpMax	魔法最大值
+		ApMax	怒气最大值
+		Speed		技能冷却加成，cd = 原始cd * 1000 / CDSpeed 
+
+		攻击属性
+			Atk		攻击
+
+		防御属性
+			Def		防御
+
+
+	当前属性值
+		Hp	生命当前值
+		Mp	魔法当前值
+		Ap	怒气当前值
+
+	当前属性千分比值
+		HpPer	生命千分比值
+		MpPer	魔法千分比值
+		ApPer	怒气千分比值
+
+	当前属性损失值
+		HpLost	生命损失值
+		MpLost	魔法损失值
+		ApLost	怒气损失值
+
+	当前属性损失千分比值
+		HpLostPer	生命损失千分比值
+		MpLostPer	魔法损失千分比值
+		ApLostPer	怒气损失千分比值
+
+--------------------------------------------------------------
+
+	伤害	-----	用于伤害结算
+
+		Hurt	总伤害
+		
+		
+
+	条件	----	用于Buff条件、影响目标，AI权值计算
+		Id		唯一标示
+		Type	类型，如Actor表，Skill表，Buff表中都有Type字段
+		Tag		标签，如Skill表，Buff表中都有Tag字段，用于归类
+		Kind	种类
+		Slot	槽位，如技能的位置，暂时无用
+		Lv		等级
+		Rank	品阶，0普通，1精英，2Boss
+		Career	职业
+		Rand	随机值，0~1万
+		Dist	距离,毫米
+		Dot		朝向夹角,完全相同1，垂直0，完全相反-1
+		Buff	增益
+		Status	状态
+		Attack	普攻
+		Skill	技能
+		Gap		间隔时间
+		Cd		冷却
+		Stack	堆叠数
+		Dura	持续时间
+		Range	范围
+		Bullet	子弹
+		Times	次数
+		HitTimes	打击次数
+		Offset	偏移
+		BulletSet	子弹设置
+
+----------------------------------------------------
+人物动画状态	eState
+    Idle	0	待机
+    Move	1	移动
+    Turn	2	转身
+    Show	3	展示动作
+    Hit		4	受击，爬起
+    Skill	5	技能动作
+    Restore	6	施法恢复，收招
+    Die		7	死亡只有状态标识，没有动作
+    Force	8	强制控制,最后一个
