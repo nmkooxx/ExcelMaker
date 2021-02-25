@@ -1,4 +1,4 @@
-﻿using CsvHelper;
+using CsvHelper;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NPOI.SS.UserModel;
@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using System.Windows.Forms.VisualStyles;
 
 public partial class MainForm {
 
@@ -229,18 +230,26 @@ public partial class MainForm {
         }
     }
 
-    private string getFileName(string filePath) {
-        if (m_setting.nameSource == 1) {
-            return m_sheetName;
-        }
+    private void getFileName(string filePath, out string fileName, out string fileDir) {
         DirectoryInfo directoryInfo = new DirectoryInfo(filePath);
-        string fileName = directoryInfo.Name;
-        string[] keys = fileName.Substring(0, fileName.Length - directoryInfo.Extension.Length).Split('_');
-        if (keys.Length == 2) {
-            return keys[0];
+        fileDir = directoryInfo.Parent.FullName;
+        if (fileDir.StartsWith(m_config.rootPath, StringComparison.OrdinalIgnoreCase)) {
+            fileDir = fileDir.Substring(m_config.rootPath.Length + 1);
         }
         else {
-            return keys[keys.Length - 1];
+            fileDir = fileDir.Substring(fileDir.LastIndexOf(m_config.rootPath) + m_config.rootPath.Length + 1);
+        }
+        string dirName = directoryInfo.Name;
+        string[] keys = dirName.Substring(0, dirName.Length - directoryInfo.Extension.Length).Split('_');
+        if (keys.Length == 2) {
+            fileName = keys[0];
+        }
+        else {
+            fileName = keys[keys.Length - 1];
+        }
+
+        if (m_setting.nameSource == 1) {
+            fileName = m_sheetName;
         }
     }
 
@@ -261,6 +270,7 @@ public partial class MainForm {
         string headExtend;
         string csvExtend;
         string readerExtend;
+        int offset = m_config.rootPath.Length + 1;
         foreach (int index in excelList.CheckedIndices) {
             m_filePath = m_excelPaths[index];
             bool need = ReadExcel(m_filePath, type, initCsv, rowToCsv);
@@ -269,13 +279,20 @@ public partial class MainForm {
             }
             string csvText = m_csvBuilder.ToString();
             csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
-            string csvName = getFileName(m_filePath);
+            getFileName(m_filePath, out var csvName, out var csvDir);
             string[] dirPathArrray = dirPaths.Split(';');
             foreach (string dirPath in dirPathArrray) {
-                if (!Directory.Exists(dirPath)) {
-                    Directory.CreateDirectory(dirPath);
+                string path;
+                if (m_setting.exportDir && !string.IsNullOrEmpty(csvDir)) {
+                    path = Path.Combine(dirPath, csvDir);
                 }
-                string csvPath = Path.Combine(dirPath, csvName + ".csv");
+                else {
+                    path = dirPath;
+                }
+                if (!Directory.Exists(path)) {
+                    Directory.CreateDirectory(path);
+                }
+                string csvPath = Path.Combine(path, csvName + ".csv");
                 File.WriteAllText(csvPath, csvText);
                 Debug.Log("导出Csv:" + csvPath);
             }
@@ -344,7 +361,14 @@ public partial class MainForm {
                 continue;
             }
 
-            string path = Path.Combine(dirPath, getFileName(m_filePath) + ".json");
+            getFileName(m_filePath, out var csvName, out var csvDir);
+            string path;
+            if (m_setting.exportDir) {
+                path = Path.Combine(dirPath, csvDir + "/" + csvName + ".json");
+            }
+            else {
+                path = Path.Combine(dirPath, csvName + ".json");
+            }
             if (!Directory.Exists(dirPath)) {
                 Directory.CreateDirectory(dirPath);
             }
@@ -388,7 +412,7 @@ public partial class MainForm {
                     return cell.StringCellValue;
                 }
             default:
-                Debug.LogWarning("导出配置错误:" + m_filePath + " 未定义单元格类型：" + cell.CellType);
+                Debug.LogWarning("导出配置错误:" + m_filePath + " 未定义单元格类型：" + cell.CellType + " "  + cell.StringCellValue + " row:" + cell.RowIndex);
                 return cell.StringCellValue;
         }
     }
@@ -677,11 +701,20 @@ public partial class MainForm {
                 case "int":
                 case "ulong":
                 case "long":
+                case "fixed":
+                    //Debug.Log("value:" + value + " type:" + value.GetType());
+                    if (value is string) {
+                        Debug.LogError(m_filePath + " 数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    }
+                    else if (value.ToString().IndexOf('.') >= 0) {
+                        Debug.LogError(m_filePath + " 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    }
+                    m_csvBuilder.Append(value);
+                    break;
                 case "float":
                 case "double":
-                case "fixed":
                     if (value is string) {
-                        Debug.LogError(m_filePath + " 基础格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        Debug.LogError(m_filePath + " 小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                     m_csvBuilder.Append(value);
                     break;

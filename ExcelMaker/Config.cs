@@ -50,6 +50,11 @@ public class Setting {
     /// </summary>
     public int nameSource = 0;
 
+    /// <summary>
+    /// 是否导出文件夹
+    /// </summary>
+    public bool exportDir = true;
+
     public Combine[] combines;
 }
 
