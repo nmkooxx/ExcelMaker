@@ -11,21 +11,23 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
+using static System.Windows.Forms.CheckedListBox;
 
-public partial class MainForm {
+public class Logic {
 
-    private void init() {
+    public Logic() {
         readConfig();
         readSetting();
         readExtend();
-
-        initUI();
-
-        scan();
     }
 
-
     private Config m_config;
+    public Config config {
+        get {
+            return m_config;
+        }
+    }
+
     //private string m_configPath;
     private string m_configPath = "ExcelMakerConfig.txt";
     private void readConfig() {
@@ -42,16 +44,22 @@ public partial class MainForm {
         }
         else {
             m_config = new Config();
-            writeConfig();
+            WriteConfig();
         }
     }
 
-    private void writeConfig() {
+    public void WriteConfig() {
         string text = JsonConvert.SerializeObject(m_config, m_jsonSettings);
         File.WriteAllText(m_configPath, text);
     }
 
     private Setting m_setting;
+    public Setting setting {
+        get {
+            return m_setting;
+        }
+    }
+
     private string m_settingPath = "ExcelMakerSetting.txt";
     private void readSetting() {
         if (File.Exists(m_settingPath)) {
@@ -63,7 +71,7 @@ public partial class MainForm {
         }
     }
 
-    private void writeSetting() {
+    public void WriteSetting() {
         string text = JsonConvert.SerializeObject(m_setting, m_jsonSettings);
         File.WriteAllText(m_settingPath, text);
     }
@@ -162,34 +170,8 @@ public partial class MainForm {
         }
     }
 
-    private void initUI() {
-        foreach (var item in group_serverExportType.Controls) {
-            var radioButton = item as RadioButton;
-            if (radioButton.TabIndex == m_setting.serverExportType) {
-                radioButton.Checked = true;
-                break;
-            }
-        }
-
-        foreach (var item in group_clientExportType.Controls) {
-            var radioButton = item as RadioButton;
-            if (radioButton.TabIndex == m_setting.clientExportType) {
-                radioButton.Checked = true;
-                break;
-            }
-        }
-
-        input_root.Text = m_config.rootPath;
-        input_server.Text = m_config.serverPath;
-        input_serverCode.Text = m_config.serverCodePath;
-        input_client.Text = m_config.clientPath;
-        input_clientCode.Text = m_config.clientCodePath;
-
-        check_useSheetName.Checked = m_setting.nameSource == 1;
-    }
-
     private List<string> m_excelPaths = new List<string>(50);
-    private void scan() {
+    public void Scan(CheckedListBox excelList) {
         if (!Directory.Exists(m_config.rootPath)) {
             Debug.LogError("Excel路径错误：" + m_config.rootPath);
             return;
@@ -216,14 +198,15 @@ public partial class MainForm {
     }
 
     private static ExportLanguage s_exportLanguage;
-    private void export(string dirPath, char type, ExportType exportType, ExportLanguage language, string codePath, bool exportCode) {
+    public void Export(string dirPath, int[] CheckedIndices,
+        char type, ExportType exportType, ExportLanguage language, string codePath, bool exportCode) {
         s_exportLanguage = language;
         switch (exportType) {
             case ExportType.Csv:
-                exportCsv(dirPath, type, codePath, exportCode);
+                exportCsv(dirPath, CheckedIndices, type, codePath, exportCode);
                 break;
             case ExportType.Json:
-                exportJson(dirPath, type);
+                exportJson(dirPath, CheckedIndices, type);
                 break;
             default:
                 break;
@@ -237,8 +220,19 @@ public partial class MainForm {
             fileDir = fileDir.Substring(m_config.rootPath.Length + 1);
         }
         else {
-            fileDir = fileDir.Substring(fileDir.LastIndexOf(m_config.rootPath) + m_config.rootPath.Length + 1);
+            int index = fileDir.LastIndexOf(m_config.rootPath) + m_config.rootPath.Length + 1;
+            if (index < fileDir.Length) {
+                fileDir = fileDir.Substring(index);
+            }
+            else {
+                fileDir = null;
+            }
         }
+        if (m_setting.nameSource == 1) {
+            fileName = m_sheetName;
+            return;
+        }
+
         string dirName = directoryInfo.Name;
         string[] keys = dirName.Substring(0, dirName.Length - directoryInfo.Extension.Length).Split('_');
         if (keys.Length == 2) {
@@ -247,13 +241,9 @@ public partial class MainForm {
         else {
             fileName = keys[keys.Length - 1];
         }
-
-        if (m_setting.nameSource == 1) {
-            fileName = m_sheetName;
-        }
     }
 
-    private void exportCsv(string dirPaths, char type, string codePaths, bool exportCode) {
+    private void exportCsv(string dirPath, int[] CheckedIndices, char type, string codePaths, bool exportCode) {
         string localPath;
         if (type == 'C') {
             localPath = "client";
@@ -271,34 +261,59 @@ public partial class MainForm {
         string csvExtend;
         string readerExtend;
         int offset = m_config.rootPath.Length + 1;
-        foreach (int index in excelList.CheckedIndices) {
-            m_filePath = m_excelPaths[index];
+        int slot = 0;
+        string csvName = null, csvDir = null, path = null;
+        string localCsvPath = null;
+        for (int i = 0; i < m_excelPaths.Count; i++) {
+            m_filePath = m_excelPaths[i];
+            if (CheckedIndices != null) {
+                //选择模式
+                if (slot >= CheckedIndices.Length) {
+                    break;
+                }
+                if (CheckedIndices[slot] != i) {
+                    continue;
+                }
+                ++slot;
+                getFileName(m_filePath, out csvName, out csvDir);
+                if (m_setting.exportDir && csvDir != null) {
+                    path = Path.Combine(dirPath, csvDir + "/" + csvName + ".csv");
+                    localCsvPath = Path.Combine(localPath, csvDir + "/" + csvName + ".csv");
+                }
+                else {
+                    path = Path.Combine(dirPath, csvName + ".csv");
+                    localCsvPath = Path.Combine(localPath, csvName + ".csv");
+                }
+                if (!Directory.Exists(dirPath)) {
+                    Directory.CreateDirectory(dirPath);
+                }
+            }
+            else {
+                getFileName(m_filePath, out csvName, out csvDir);
+                //同步模式，检查表格是否已经存在
+                if (m_setting.exportDir && csvDir != null) {
+                    path = Path.Combine(dirPath, csvDir + "/" + csvName + ".csv");
+                    localCsvPath = Path.Combine(localPath, csvDir + "/" + csvName + ".csv");
+                }
+                else {
+                    path = Path.Combine(dirPath, csvName + ".csv");
+                    localCsvPath = Path.Combine(localPath, csvName + ".csv");
+                }
+                if (!File.Exists(path)) {
+                    continue;
+                }
+            }
+
             bool need = ReadExcel(m_filePath, type, initCsv, rowToCsv);
             if (!need) {
                 continue;
             }
             string csvText = m_csvBuilder.ToString();
             csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
-            getFileName(m_filePath, out var csvName, out var csvDir);
-            string[] dirPathArrray = dirPaths.Split(';');
-            foreach (string dirPath in dirPathArrray) {
-                string path;
-                if (m_setting.exportDir && !string.IsNullOrEmpty(csvDir)) {
-                    path = Path.Combine(dirPath, csvDir);
-                }
-                else {
-                    path = dirPath;
-                }
-                if (!Directory.Exists(path)) {
-                    Directory.CreateDirectory(path);
-                }
-                string csvPath = Path.Combine(path, csvName + ".csv");
-                File.WriteAllText(csvPath, csvText);
-                Debug.Log("导出Csv:" + csvPath);
-            }
 
-            string localCsvPath = Path.Combine(localPath, csvName + ".csv");
+            File.WriteAllText(path, csvText);
             File.WriteAllText(localCsvPath, csvText);
+            Debug.Log("导出Csv:" + path);
 
             if (exportCode) {
                 switch (s_exportLanguage) {
@@ -353,24 +368,43 @@ public partial class MainForm {
         Debug.Log("导出Csv完成:" + type);
     }
 
-    private void exportJson(string dirPath, char type) {
-        foreach (int index in excelList.CheckedIndices) {
-            m_filePath = m_excelPaths[index];
-            bool need = ReadExcel(m_filePath, type, initJson, rowToJson);
-            if (!need) {
-                continue;
-            }
-
-            getFileName(m_filePath, out var csvName, out var csvDir);
-            string path;
-            if (m_setting.exportDir) {
-                path = Path.Combine(dirPath, csvDir + "/" + csvName + ".json");
+    private void exportJson(string dirPath, int[] CheckedIndices, char type) {
+        int slot = 0;
+        string csvName = null, csvDir = null, path = null;
+        for (int i = 0; i < m_excelPaths.Count; i++) {
+            m_filePath = m_excelPaths[i];
+            if (CheckedIndices != null) {
+                //选择模式
+                if (slot >= CheckedIndices.Length) {
+                    break;
+                }
+                if (CheckedIndices[slot] != i) {
+                    continue;
+                }
+                ++slot;
+                getFileName(m_filePath, out csvName, out csvDir);
+                if (m_setting.exportDir && csvDir != null) {
+                    path = Path.Combine(dirPath, csvDir + "/" + csvName + ".json");
+                }
+                else {
+                    path = Path.Combine(dirPath, csvName + ".json");
+                }
+                if (!Directory.Exists(dirPath)) {
+                    Directory.CreateDirectory(dirPath);
+                }
             }
             else {
-                path = Path.Combine(dirPath, csvName + ".json");
-            }
-            if (!Directory.Exists(dirPath)) {
-                Directory.CreateDirectory(dirPath);
+                getFileName(m_filePath, out csvName, out csvDir);
+                //同步模式，检查表格是否已经存在
+                if (m_setting.exportDir) {
+                    path = Path.Combine(dirPath, csvDir + "/" + csvName + ".json");
+                }
+                else {
+                    path = Path.Combine(dirPath, csvName + ".json");
+                }
+                if (!File.Exists(path)) {
+                    continue;
+                }
             }
             string text = JsonConvert.SerializeObject(m_jObject, m_jsonSettings);
             text = Regex.Replace(text, "(?<!\r)\n|\r\n", "\n");
