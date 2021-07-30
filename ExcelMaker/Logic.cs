@@ -28,6 +28,8 @@ public class Logic {
         }
     }
 
+    private DirectoryInfo m_rootInfo;
+
     //private string m_configPath;
     private string m_configPath = "ExcelMakerConfig.txt";
     private void readConfig() {
@@ -41,6 +43,7 @@ public class Logic {
         if (File.Exists(m_configPath)) {
             string text = File.ReadAllText(m_configPath);
             m_config = JsonConvert.DeserializeObject<Config>(text);
+            m_rootInfo = new DirectoryInfo(m_config.rootPath);
         }
         else {
             m_config = new Config();
@@ -51,6 +54,7 @@ public class Logic {
     public void WriteConfig() {
         string text = JsonConvert.SerializeObject(m_config, m_jsonSettings);
         File.WriteAllText(m_configPath, text);
+        m_rootInfo = new DirectoryInfo(m_config.rootPath);
     }
 
     private Setting m_setting;
@@ -215,19 +219,15 @@ public class Logic {
 
     private void getFileName(string filePath, out string fileName, out string fileDir) {
         DirectoryInfo directoryInfo = new DirectoryInfo(filePath);
-        fileDir = directoryInfo.Parent.FullName;
-        if (fileDir.StartsWith(m_config.rootPath, StringComparison.OrdinalIgnoreCase)) {
-            fileDir = fileDir.Substring(m_config.rootPath.Length + 1);
+        if (m_rootInfo.Name == directoryInfo.Parent.Name || m_rootInfo.Name == directoryInfo.Parent.Parent?.Name) {
+            //没有文件夹
+            fileDir = null;
         }
         else {
-            int index = fileDir.LastIndexOf(m_config.rootPath) + m_config.rootPath.Length + 1;
-            if (index < fileDir.Length) {
-                fileDir = fileDir.Substring(index);
-            }
-            else {
-                fileDir = null;
-            }
-        }
+            //只保留最后一级文件夹名称
+            fileDir = directoryInfo.Parent.Name;
+        }       
+
         if (m_setting.nameSource == 1) {
             fileName = m_sheetName;
             return;
@@ -277,27 +277,31 @@ public class Logic {
                 ++slot;
                 getFileName(m_filePath, out csvName, out csvDir);
                 if (m_setting.exportDir && csvDir != null) {
-                    path = Path.Combine(dirPath, csvDir + "/" + csvName + ".csv");
-                    localCsvPath = Path.Combine(localPath, csvDir + "/" + csvName + ".csv");
+                    path = dirPath + "/" + csvDir + "/" + csvName + ".csv";
+                    localCsvPath = localPath + "/" + csvDir + "/" + csvName + ".csv";
+                    if (!Directory.Exists(dirPath + "/" + csvDir)) {
+                        Directory.CreateDirectory(dirPath + "/" + csvDir);
+                    }
+                    if (!Directory.Exists(localPath + "/" + csvDir)) {
+                        Directory.CreateDirectory(localPath + "/" + csvDir);
+                    }
                 }
                 else {
-                    path = Path.Combine(dirPath, csvName + ".csv");
-                    localCsvPath = Path.Combine(localPath, csvName + ".csv");
+                    path = dirPath + "/" + csvName + ".csv";
+                    localCsvPath = localPath + "/" + csvName + ".csv";
                 }
-                if (!Directory.Exists(dirPath)) {
-                    Directory.CreateDirectory(dirPath);
-                }
+
             }
             else {
                 getFileName(m_filePath, out csvName, out csvDir);
                 //同步模式，检查表格是否已经存在
                 if (m_setting.exportDir && csvDir != null) {
-                    path = Path.Combine(dirPath, csvDir + "/" + csvName + ".csv");
-                    localCsvPath = Path.Combine(localPath, csvDir + "/" + csvName + ".csv");
+                    path = dirPath + "/" + csvDir + "/" + csvName + ".csv";
+                    localCsvPath = localPath + "/" + csvDir + "/" + csvName + ".csv";
                 }
                 else {
-                    path = Path.Combine(dirPath, csvName + ".csv");
-                    localCsvPath = Path.Combine(localPath, csvName + ".csv");
+                    path = dirPath + "/" + csvName + ".csv";
+                    localCsvPath = localPath + "/" + csvName + ".csv";
                 }
                 if (!File.Exists(path)) {
                     continue;
