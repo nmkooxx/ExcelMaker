@@ -10,24 +10,45 @@ public class CsvMaker_CSharp {
     static string TemplateClass = @"using System;
 using UnityEngine;
 #headerfile#
-public partial class @className : CsvTemplate<@classKey> {
-#property#
+public partial class @className : CsvTemplate<@classKey>, IByteReadable
+#if UNITY_EDITOR
+    , CsvHelper.IByteWriteable
+#endif
+{#property#
 
     public void SetField(string field, string text) {
-        switch (field) {
-        #BaseCase#
-			default:
-				break;
-        }
-    }
-
-    public void SetFieldByNode(string field, CsvNode node) {
-        switch (field) {
-        #NodeCase#
+        switch (field) {#BaseCase#
             default:
                 break;
         }
     }
+
+    public void SetFieldByNode(string field, CsvNode node) {
+        switch (field) {#NodeCase#
+            default:
+                break;
+        }
+    }
+
+    public void Deserialize(ByteReader reader) {
+        reader.Read(ref c_id);
+
+        byte t_tag = 0;
+        while (reader.TryReadTag(ref t_tag)) {
+            switch (t_tag) {#ByteRead#
+                default:
+                    Debug.LogError($""@className.Deserialize error tag:{t_tag}"");
+                    break;
+            }
+        }
+    }
+
+#if UNITY_EDITOR
+    public void Serialize(CsvHelper.ByteWriter writer) {
+        writer.Write(c_id);
+        #ByteWrite#
+    }
+#endif
 }
 
 public partial class @classNameReader : CsvReader<@classKey, @className> {
@@ -73,9 +94,26 @@ public partial class Csv {
     public static string TemplateDefineField = @"
     public const @type @name = @value;";
 
+    static string TemplateSimpeRead = @"
+                case @tag:
+                    reader.Read(ref c_@name);
+                    break;";
+
+    static string TemplateClassRead = @"
+                case @tag:
+                    @typeConverter.Inst.Read(reader, ref c_@name);
+                    break;";
+
+    static string TemplateSimpeWrite = @"
+        writer.Write(c_@name, @tag);";
+
+    static string TemplateClassWrite = @"
+        @typeConverter.Inst.Write(writer, c_@name, @tag);";
+
     static string mSuffixName = ".cs";
 
-    private static string GetSysType(string typeName) {
+    private static string GetSysType(string typeName, out bool isBaseType) {
+        isBaseType = true;
         string retTypeName = "";
         string typeNameLower = typeName.ToLower();
         switch (typeNameLower) {
@@ -94,19 +132,34 @@ public partial class Csv {
                 retTypeName = typeof(float).Name;
                 break;
             case "bool":
+            case "boolean":
                 retTypeName = typeof(bool).Name;
                 break;
-            case "int16":
-                retTypeName = typeof(Int16).Name;
+            case "byte":
+                retTypeName = typeof(byte).Name;
                 break;
+            case "short":
+            case "int16":
+                retTypeName = typeof(short).Name;
+                break;
+            case "ushort":
             case "uint16":
-                retTypeName = typeof(UInt16).Name;
+                retTypeName = typeof(ushort).Name;
+                break;
+            case "long":
+            case "int64":
+                retTypeName = typeof(long).Name;
+                break;
+            case "ulong":
+            case "uint64":
+                retTypeName = typeof(ulong).Name;
                 break;
             case "double":
                 retTypeName = typeof(double).Name;
                 break;
             default:
                 retTypeName = typeName;
+                isBaseType = false;
                 break;
         }
         return retTypeName;
@@ -151,13 +204,15 @@ public partial class Csv {
         StringBuilder propertyBuilder = new StringBuilder();
         StringBuilder simpleBuilder = new StringBuilder();
         StringBuilder nodeBuilder = new StringBuilder();
+        StringBuilder byteReadBuilder = new StringBuilder();
+        StringBuilder byteWriteBuilder = new StringBuilder();
 
         string classKey = "";
         List<string> flagKeys = new List<string>();
         List<string> importKeys = new List<string>();
 
-        for (int i = 0; i < headers.Length; i++) {
-            CsvHeader header = headers[i];
+        for (int idx = 0; idx < headers.Length; idx++) {
+            CsvHeader header = headers[idx];
             if (header.skip) {
                 continue;
             }
@@ -194,7 +249,7 @@ public partial class Csv {
                     break;
             }
 
-            string typeStr = typeStrs[i];
+            string typeStr = typeStrs[idx];
             if (string.IsNullOrEmpty(typeStr)) {
                 continue;
             }
@@ -206,9 +261,10 @@ public partial class Csv {
                 typeStr = typeStr.Substring(1);
             }
             string[] subTypes = typeStr.Split(CsvConfig.classSeparator);
-            string typeName = GetSysType(subTypes[0]);
+            bool isBaseType;
+            string typeName = GetSysType(subTypes[0], out isBaseType);
             subTypes = typeName.Split(CsvConfig.arrayChars);
-            string baseTypeName = GetSysType(subTypes[0]);
+            string baseTypeName = GetSysType(subTypes[0], out isBaseType);
             bool isEnum = false;
             string funcName = string.Empty;
             if (subTypes.Length == 1) {
@@ -249,6 +305,20 @@ public partial class Csv {
             if (header.name == CsvConfig.primaryKey) {
                 classKey = typeName;
             }
+            else {
+                string byteRead;
+                string byteWrite;
+                if (isBaseType || isEnum) {
+                    byteRead = TemplateSimpeRead.Replace("@tag", idx.ToString()).Replace("@name", fieldName);
+                    byteWrite = TemplateSimpeWrite.Replace("@tag", idx.ToString()).Replace("@name", fieldName);
+                }
+                else {
+                    byteRead = TemplateClassRead.Replace("@tag", idx.ToString()).Replace("@type", baseTypeName).Replace("@name", fieldName);
+                    byteWrite = TemplateClassWrite.Replace("@tag", idx.ToString()).Replace("@type", baseTypeName).Replace("@name", fieldName);
+                }
+                byteReadBuilder.Append(byteRead);
+                byteWriteBuilder.Append(byteWrite);
+            }
 
             template = templateProperty.Replace("@type", typeName).Replace("@name", fieldName);
             propertyBuilder.Append(template);
@@ -264,6 +334,8 @@ public partial class Csv {
         classStr = classStr.Replace("#property#", propertyBuilder.ToString());
         classStr = classStr.Replace("#BaseCase#", simpleBuilder.ToString());
         classStr = classStr.Replace("#NodeCase#", nodeBuilder.ToString());
+        classStr = classStr.Replace("#ByteRead#", byteReadBuilder.ToString());
+        classStr = classStr.Replace("#ByteWrite#", byteWriteBuilder.ToString());
 
         classStr = Regex.Replace(classStr, "(?<!\r)\n|\r\n", "\n");
 

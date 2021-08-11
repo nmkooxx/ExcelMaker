@@ -461,8 +461,15 @@ public class Logic {
     private CsvNode[] m_nodes;
     private string[] m_rawTypes;
     private string[] m_cellTypes;
+    /// <summary>
+    /// 常量定义列序号
+    /// </summary>
     private int m_defineIndex;
     private string m_defineName;
+    /// <summary>
+    /// 导出前后端列序号
+    /// </summary>
+    private int m_exportIndex;
     private int m_curIndex;
     private List<string> m_rawIds = new List<string>(1000);
 
@@ -510,6 +517,8 @@ public class Logic {
             }
 
             m_defineIndex = -1;
+            m_exportIndex = -1;
+
             m_rawTypes = new string[cellCount];
             m_cellTypes = new string[cellCount];
             //第一列为id，只支持int，string
@@ -560,6 +569,11 @@ public class Logic {
                 if (cellType == "define") {
                     m_defineIndex = i;
                     m_defineName = cell.StringCellValue;
+                    m_headers[i] = CsvHeader.Pop(string.Empty);
+                    continue;
+                }
+                if (cellType == "export") {
+                    m_exportIndex = i;
                     m_headers[i] = CsvHeader.Pop(string.Empty);
                     continue;
                 }
@@ -632,6 +646,21 @@ public class Logic {
                     continue;
                 }
                 m_rawIds.Add(id);
+
+                if (m_exportIndex > 0) {
+                    var exportCell = row.GetCell(m_exportIndex);
+                    if (exportCell == null) {
+                        continue;
+                    }
+                    obj = getCellValue(exportCell);
+                    if (obj == null) {
+                        continue;
+                    }
+                    var exportStr = obj.ToString();
+                    if (exportStr != "A" && !exportStr.Contains(type)) {
+                        continue;
+                    }
+                }
 
                 try {
                     rowAction(type, row);
