@@ -8,7 +8,7 @@ using System.Windows.Forms;
 /// 日志输出模板
 /// </summary>
 public static class Debug {
-    const int kLogMax = 300;
+    const int kLogMax = 150;
     const int kLogSpace = 10;
     private static Size m_logMaxSize;
     private static Queue<Label> m_logLabels;

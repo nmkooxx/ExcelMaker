@@ -43,12 +43,6 @@ public class Setting {
     public int serverLanguage = 1;
     public int clientExportType;
     public int clientLanguage = 0;
-    /// <summary>
-    /// 表名来源
-    /// 0 文件名中_分割的最后一个
-    /// 1 SheetName
-    /// </summary>
-    public int nameSource = 0;
 
     /// <summary>
     /// 是否导出文件夹

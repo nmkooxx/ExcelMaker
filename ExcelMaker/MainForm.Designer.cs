@@ -47,7 +47,6 @@ partial class MainForm {
             this.check_clientCode = new System.Windows.Forms.CheckBox();
             this.check_serverCode = new System.Windows.Forms.CheckBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.check_useSheetName = new System.Windows.Forms.CheckBox();
             this.btn_syncServer = new System.Windows.Forms.Button();
             this.btn_syncClient = new System.Windows.Forms.Button();
             this.group_serverExportType.SuspendLayout();
@@ -303,17 +302,6 @@ partial class MainForm {
             this.label1.TabIndex = 28;
             this.label1.Text = "注意：不支持Json格式的string[]";
             // 
-            // check_useSheetName
-            // 
-            this.check_useSheetName.AutoSize = true;
-            this.check_useSheetName.Location = new System.Drawing.Point(219, 177);
-            this.check_useSheetName.Name = "check_useSheetName";
-            this.check_useSheetName.Size = new System.Drawing.Size(138, 16);
-            this.check_useSheetName.TabIndex = 29;
-            this.check_useSheetName.Text = "使用SheetName为类名";
-            this.check_useSheetName.UseVisualStyleBackColor = true;
-            this.check_useSheetName.CheckedChanged += new System.EventHandler(this.check_useSheetName_CheckedChanged);
-            // 
             // btn_syncServer
             // 
             this.btn_syncServer.Location = new System.Drawing.Point(781, 72);
@@ -341,7 +329,6 @@ partial class MainForm {
             this.ClientSize = new System.Drawing.Size(1177, 968);
             this.Controls.Add(this.btn_syncClient);
             this.Controls.Add(this.btn_syncServer);
-            this.Controls.Add(this.check_useSheetName);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.check_serverCode);
             this.Controls.Add(this.check_clientCode);
@@ -401,7 +388,6 @@ partial class MainForm {
     private System.Windows.Forms.CheckBox check_clientCode;
     private System.Windows.Forms.CheckBox check_serverCode;
     private System.Windows.Forms.Label label1;
-    private System.Windows.Forms.CheckBox check_useSheetName;
     private System.Windows.Forms.Button btn_syncServer;
     private System.Windows.Forms.Button btn_syncClient;
 }

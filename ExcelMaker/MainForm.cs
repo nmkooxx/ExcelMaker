@@ -17,7 +17,8 @@ public partial class MainForm : Form {
         Debug.Init(panel_log);
         m_Logic = new Logic();
         initUI();
-        m_Logic.Scan(excelList);        
+        m_Logic.Scan(excelList);
+        excelList.ItemCheck += excelList_ItemCheck;
     }
 
     public Config config {
@@ -54,8 +55,6 @@ public partial class MainForm : Form {
         input_serverCode.Text = config.serverCodePath;
         input_client.Text = config.clientPath;
         input_clientCode.Text = config.clientCodePath;
-
-        check_useSheetName.Checked = setting.nameSource == 1;
     }
 
     private void btn_scan_Click(object sender, EventArgs e) {
@@ -63,35 +62,25 @@ public partial class MainForm : Form {
 	}
 
     private void btn_exportServer_Click(object sender, EventArgs e) {
-        var indices = new int[excelList.CheckedIndices.Count];
-        for (int i = 0; i < excelList.CheckedIndices.Count; i++) {
-            indices[i] = excelList.CheckedIndices[i];
-        }
-
-        m_Logic.Export(config.serverPath, indices,
+        m_Logic.Export(config.serverPath, false,
             'S', (ExportType)setting.serverExportType, (ExportLanguage)setting.serverLanguage,
             config.serverCodePath, check_serverCode.Checked);
     }
 
     private void btn_exportClient_Click(object sender, EventArgs e) {
-        var indices = new int[excelList.CheckedIndices.Count];
-        for (int i = 0; i < excelList.CheckedIndices.Count; i++) {
-            indices[i] = excelList.CheckedIndices[i];
-        }
-
-        m_Logic.Export(config.clientPath, indices,
+        m_Logic.Export(config.clientPath, false,
             'C', (ExportType)setting.clientExportType, (ExportLanguage)setting.clientLanguage,
             config.clientCodePath, check_clientCode.Checked);
     }
 
     private void btn_syncServer_Click(object sender, EventArgs e) {
-        m_Logic.Export(config.serverPath, null,
+        m_Logic.Export(config.serverPath, true,
             'S', (ExportType)setting.serverExportType, (ExportLanguage)setting.serverLanguage,
             config.serverCodePath, check_serverCode.Checked);
     }
 
     private void btn_syncClient_Click(object sender, EventArgs e) {
-        m_Logic.Export(config.clientPath, null,
+        m_Logic.Export(config.clientPath, true,
             'C', (ExportType)setting.clientExportType, (ExportLanguage)setting.clientLanguage,
             config.clientCodePath, check_clientCode.Checked);
     }
@@ -126,14 +115,22 @@ public partial class MainForm : Form {
         m_Logic.WriteConfig();
     }
 
+    private bool m_batchSelect = false;
     private void btn_selectAll_Click(object sender, EventArgs e) {
+        m_batchSelect = true;
         for (int i = 0; i < excelList.Items.Count; i++) {
+            var excelInfo = m_Logic.excelInfos[i];
+            excelInfo.selected = true;
             excelList.SetItemChecked(i, true);
         }
+        m_batchSelect = false;
     }
 
     private void btn_selectInversion_Click(object sender, EventArgs e) {
+        m_batchSelect = true;
         for (int i = 0; i < excelList.Items.Count; i++) {
+            var excelInfo = m_Logic.excelInfos[i];
+            excelInfo.selected = !excelInfo.selected;
             if (excelList.GetItemChecked(i)) {
                 excelList.SetItemChecked(i, false);
             }
@@ -141,6 +138,39 @@ public partial class MainForm : Form {
                 excelList.SetItemChecked(i, true);
             }
         }
+        m_batchSelect = false;
+    }
+
+    private void excelList_ItemCheck(object sender, EventArgs e) {
+        var arg = e as ItemCheckEventArgs;
+        if (m_batchSelect) {
+            //Debug.Log($"ItemCheck skip:{arg.Index} {arg.NewValue}");
+            return;
+        }
+        if (arg.Index >= m_Logic.excelInfos.Count) {
+            return;
+        }
+        var excelInfo = m_Logic.excelInfos[arg.Index];
+        var selected = arg.NewValue == CheckState.Checked;
+        if (selected == excelInfo.selected) {
+            return;
+        }
+        excelInfo.selected = selected;
+
+        var list = m_Logic.excelMap[excelInfo.id];
+        if (list.Count > 2) {
+            for (int i = 0; i < list.Count; i++) {
+                var other = list[i];
+                if (other.selected == selected) {
+                    continue;
+                }
+                other.selected = selected;
+
+                excelList.SetItemChecked(other.index, selected);
+            }
+        }
+
+        //Debug.Log($"excelList_ItemCheck sender:{sender} cnt:{list.Count} e:{e}");
     }
 
     private void radio_clientExportType_CheckedChanged(object sender, EventArgs e) {
@@ -163,11 +193,5 @@ public partial class MainForm : Form {
 
     private void btn_clearLog_Click(object sender, EventArgs e) {
         Debug.Clear();
-    }
-
-    private void check_useSheetName_CheckedChanged(object sender, EventArgs e) {
-        CheckBox check = sender as CheckBox;
-        setting.nameSource = check.Checked ? 1 : 0;
-        m_Logic.WriteSetting();
     }
 }

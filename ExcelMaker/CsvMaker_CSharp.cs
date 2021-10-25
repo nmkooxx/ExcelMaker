@@ -37,7 +37,7 @@ public partial class @className : CsvTemplate<@classKey>, IByteReadable
         while (reader.TryReadTag(ref t_tag)) {
             switch (t_tag) {#ByteRead#
                 default:
-                    Debug.LogError($""@className.Deserialize error tag:{t_tag}"");
+                    Debug.LogError($""@className.Deserialize error id:{c_id} tag:{t_tag}"");
                     break;
             }
         }
@@ -101,7 +101,7 @@ public partial class Csv {
 
     static string TemplateClassRead = @"
                 case @tag:
-                    @typeConverter.Inst.Read(reader, ref c_@name);
+                    c_@name = @typeConverter.Inst.Read@funName(reader);
                     break;";
 
     static string TemplateSimpeWrite = @"
@@ -314,6 +314,12 @@ public partial class Csv {
                 }
                 else {
                     byteRead = TemplateClassRead.Replace("@tag", idx.ToString()).Replace("@type", baseTypeName).Replace("@name", fieldName);
+                    if (funcName != "Base") {
+                        byteRead = byteRead.Replace("@funName", funcName);
+                    }
+                    else {
+                        byteRead = byteRead.Replace("@funName", string.Empty);
+                    }
                     byteWrite = TemplateClassWrite.Replace("@tag", idx.ToString()).Replace("@type", baseTypeName).Replace("@name", fieldName);
                 }
                 byteReadBuilder.Append(byteRead);

@@ -174,14 +174,63 @@ public class Logic {
         }
     }
 
-    private List<string> m_excelPaths = new List<string>(50);
+    public class ExcelInfo {
+        public string path;
+        public string folder { get; }
+        public string name { get; }
+        public string id { get; }
+        public int index { get; }
+        public bool selected;
+
+        public ExcelInfo(string path, int index, DirectoryInfo root) {
+            this.path = path;
+            this.index = index;
+
+            DirectoryInfo directoryInfo = new DirectoryInfo(path);
+            if (root.Name == directoryInfo.Parent.Name || root.Name == directoryInfo.Parent.Parent?.Name) {
+                //没有文件夹
+                folder = null;
+            }
+            else {
+                //只保留最后一级文件夹名称
+                folder = directoryInfo.Parent.Name;
+            }
+
+            string dirName = directoryInfo.Name;
+            string[] keys = dirName.Substring(0, dirName.Length - directoryInfo.Extension.Length).Split('_');
+            if (keys.Length >= 2) {
+                name = keys[0];
+            }
+            else {
+                name = dirName;
+                Debug.LogError($"Excel error name:{dirName}, need format [name]_[desc]");
+            }
+
+            id = folder + "_" + name;
+        }
+    }
+
+    private List<ExcelInfo> m_excelInfos = new List<ExcelInfo>(50);
+    public List<ExcelInfo> excelInfos {
+        get {
+            return m_excelInfos;
+        }
+    }
+
+    private Dictionary<string, List<ExcelInfo>> m_excelMap = new Dictionary<string, List<ExcelInfo>>();
+    public Dictionary<string, List<ExcelInfo>> excelMap {
+        get {
+            return m_excelMap;
+        }
+    }
+
     public void Scan(CheckedListBox excelList) {
         if (!Directory.Exists(m_config.rootPath)) {
             Debug.LogError("Excel路径错误：" + m_config.rootPath);
             return;
         }
 
-        m_excelPaths.Clear();
+        m_excelInfos.Clear();
         excelList.Items.Clear();
         //m_excelPaths = Directory.GetFiles(m_config.rootPath, "*.xls|*.xlsx", SearchOption.AllDirectories);
         int offset = m_config.rootPath.Length + 1;
@@ -191,59 +240,41 @@ public class Logic {
             if (path.IndexOf('~') >= 0) {
                 continue;
             }
-            string str = paths[i].Substring(offset);
+            int index = excelList.Items.Count;
+            string str = path.Substring(offset);
             excelList.Items.Add(str);
             //默认选中
-            excelList.SetItemChecked(excelList.Items.Count - 1, true);
-            m_excelPaths.Add(path);
+            excelList.SetItemChecked(index, true);
+            var info = new ExcelInfo(path, index, m_rootInfo);
+            info.selected = true;
+            m_excelInfos.Add(info);
+            if (!m_excelMap.TryGetValue(info.id, out var list)) {
+                list = new List<ExcelInfo>();
+                m_excelMap[info.id] = list;
+            }
+            list.Add(info);
         }
 
-        Debug.Log("路径扫描完成，总计文件个数：" + m_excelPaths.Count);
+        Debug.Log("路径扫描完成，总计文件个数：" + m_excelInfos.Count);
     }
 
     private static ExportLanguage s_exportLanguage;
-    public void Export(string dirPath, int[] CheckedIndices,
+    public void Export(string dirPath, bool sync,
         char type, ExportType exportType, ExportLanguage language, string codePath, bool exportCode) {
         s_exportLanguage = language;
         switch (exportType) {
             case ExportType.Csv:
-                exportCsv(dirPath, CheckedIndices, type, codePath, exportCode);
+                exportCsv(dirPath, sync, type, codePath, exportCode);
                 break;
             case ExportType.Json:
-                exportJson(dirPath, CheckedIndices, type);
+                exportJson(dirPath, sync, type);
                 break;
             default:
                 break;
         }
     }
 
-    private void getFileName(string filePath, out string fileName, out string fileDir) {
-        DirectoryInfo directoryInfo = new DirectoryInfo(filePath);
-        if (m_rootInfo.Name == directoryInfo.Parent.Name || m_rootInfo.Name == directoryInfo.Parent.Parent?.Name) {
-            //没有文件夹
-            fileDir = null;
-        }
-        else {
-            //只保留最后一级文件夹名称
-            fileDir = directoryInfo.Parent.Name;
-        }       
-
-        if (m_setting.nameSource == 1) {
-            fileName = m_sheetName;
-            return;
-        }
-
-        string dirName = directoryInfo.Name;
-        string[] keys = dirName.Substring(0, dirName.Length - directoryInfo.Extension.Length).Split('_');
-        if (keys.Length == 2) {
-            fileName = keys[0];
-        }
-        else {
-            fileName = keys[keys.Length - 1];
-        }
-    }
-
-    private void exportCsv(string dirPath, int[] CheckedIndices, char type, string codePaths, bool exportCode) {
+    private void exportCsv(string dirPath, bool sync, char type, string codePaths, bool exportCode) {
         string localPath;
         if (type == 'C') {
             localPath = "client";
@@ -261,21 +292,18 @@ public class Logic {
         string csvExtend;
         string readerExtend;
         int offset = m_config.rootPath.Length + 1;
-        int slot = 0;
         string csvName = null, csvDir = null, path = null;
         string localCsvPath = null;
-        for (int i = 0; i < m_excelPaths.Count; i++) {
-            m_filePath = m_excelPaths[i];
-            if (CheckedIndices != null) {
+        List<string> paths = new List<string>(8);
+        foreach (var list in m_excelMap.Values) {
+            var info = list[0];
+            csvDir = info.folder;
+            csvName = info.name;
+            if (!sync) {
                 //选择模式
-                if (slot >= CheckedIndices.Length) {
-                    break;
-                }
-                if (CheckedIndices[slot] != i) {
+                if (!info.selected) {
                     continue;
                 }
-                ++slot;
-                getFileName(m_filePath, out csvName, out csvDir);
                 if (m_setting.exportDir && csvDir != null) {
                     path = dirPath + "/" + csvDir + "/" + csvName + ".csv";
                     localCsvPath = localPath + "/" + csvDir + "/" + csvName + ".csv";
@@ -290,10 +318,8 @@ public class Logic {
                     path = dirPath + "/" + csvName + ".csv";
                     localCsvPath = localPath + "/" + csvName + ".csv";
                 }
-
             }
             else {
-                getFileName(m_filePath, out csvName, out csvDir);
                 //同步模式，检查表格是否已经存在
                 if (m_setting.exportDir && csvDir != null) {
                     path = dirPath + "/" + csvDir + "/" + csvName + ".csv";
@@ -308,7 +334,11 @@ public class Logic {
                 }
             }
 
-            bool need = ReadExcel(m_filePath, type, initCsv, rowToCsv);
+            paths.Clear();
+            foreach (var item in list) {
+                paths.Add(item.path);
+            }            
+            bool need = ReadExcel(paths, type, initCsv, rowToCsv);
             if (!need) {
                 continue;
             }
@@ -372,21 +402,20 @@ public class Logic {
         Debug.Log("导出Csv完成:" + type);
     }
 
-    private void exportJson(string dirPath, int[] CheckedIndices, char type) {
+    private void exportJson(string dirPath, bool sync, char type) {
         int slot = 0;
         string csvName = null, csvDir = null, path = null;
-        for (int i = 0; i < m_excelPaths.Count; i++) {
-            m_filePath = m_excelPaths[i];
-            if (CheckedIndices != null) {
+        List<string> paths = new List<string>(8);
+        foreach (var list in m_excelMap.Values) {
+            var info = list[0];
+            csvDir = info.folder;
+            csvName = info.name;
+            if (!sync) {
                 //选择模式
-                if (slot >= CheckedIndices.Length) {
-                    break;
-                }
-                if (CheckedIndices[slot] != i) {
+                if (!info.selected) {
                     continue;
                 }
                 ++slot;
-                getFileName(m_filePath, out csvName, out csvDir);
                 if (m_setting.exportDir && csvDir != null) {
                     path = Path.Combine(dirPath, csvDir + "/" + csvName + ".json");
                 }
@@ -398,7 +427,6 @@ public class Logic {
                 }
             }
             else {
-                getFileName(m_filePath, out csvName, out csvDir);
                 //同步模式，检查表格是否已经存在
                 if (m_setting.exportDir) {
                     path = Path.Combine(dirPath, csvDir + "/" + csvName + ".json");
@@ -409,6 +437,15 @@ public class Logic {
                 if (!File.Exists(path)) {
                     continue;
                 }
+            }
+
+            paths.Clear();
+            foreach (var item in list) {
+                paths.Add(item.path);
+            }
+            bool need = ReadExcel(paths, type, initJson, rowToJson);
+            if (!need) {
+                continue;
             }
             string text = JsonConvert.SerializeObject(m_jObject, m_jsonSettings);
             text = Regex.Replace(text, "(?<!\r)\n|\r\n", "\n");
@@ -473,203 +510,242 @@ public class Logic {
     private int m_curIndex;
     private List<string> m_rawIds = new List<string>(1000);
 
-    private bool ReadExcel(string filePath, char type, Action headAction, Action<char, IRow> rowAction) {
-        using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
-            XSSFWorkbook workbook = new XSSFWorkbook(fs);
-            //只读取第一张表
-            ISheet sheet = workbook.GetSheetAt(0);
-            if (sheet == null) {
-                Debug.LogError("ReadExcel Error Sheet:" + filePath);
-                return false;
-            }
-            m_sheetName = sheet.SheetName;
-
-            //第一行为表头，必定是最大列数
-            IRow nameRow = sheet.GetRow(0);
-            int cellCount = nameRow.LastCellNum;
-            //表头
-            IRow headRow = sheet.GetRow(1);
-            //导出类型
-            IRow typeRow = sheet.GetRow(2);
-            //导出服务器客户端
-            IRow exportRow = sheet.GetRow(3);
-
-            ICell cell = exportRow.GetCell(0);
-            if (cell == null || cell.StringCellValue == null) {
-                Debug.LogError("导出配置错误:" + filePath);
-                return false;
-            }
-            if (cell.StringCellValue != "A" && !cell.StringCellValue.Contains(type)) {
-                Debug.LogWarning("跳过导出:" + filePath);
-                return false;
-            }
-
-            //Debug.Log("导出:" + filePath);
-
-            string[] exportSettings = new string[cellCount];
-            for (int i = 0; i < cellCount; i++) {
-                cell = exportRow.GetCell(i);
-                if (cell == null) {
-                    exportSettings[i] = string.Empty;
-                    continue;
-                }
-                exportSettings[i] = cell.StringCellValue;
-            }
-
-            m_defineIndex = -1;
-            m_exportIndex = -1;
-
-            m_rawTypes = new string[cellCount];
-            m_cellTypes = new string[cellCount];
-            //第一列为id，只支持int，string
-            cell = typeRow.GetCell(0);
-            string value = cell.StringCellValue;
-            if (value[0] == CsvConfig.skipFlag) {
-                m_rawTypes[0] = value;
-                m_cellTypes[0] = value.Substring(1);
-            }
-            else {
-                m_rawTypes[0] = CsvConfig.skipFlag + value;
-                m_cellTypes[0] = value;
-            }
-            for (int i = 1; i < cellCount; i++) {
-                cell = typeRow.GetCell(i);
-                if (cell == null) {
-                    continue;
-                }
-                value = cell.StringCellValue;
-                m_rawTypes[i] = value;
-                int pos = value.LastIndexOf(CsvConfig.classSeparator);
-                if (pos > 0) {
-                    m_cellTypes[i] = value.Substring(pos + 1);
-                }
-                else {
-                    m_cellTypes[i] = value;
-                }
-            }
-
-            m_headers = new CsvHeader[cellCount];
-            for (int i = 0; i < cellCount; i++) {
-                if (string.IsNullOrEmpty(exportSettings[i])) {
-                    m_headers[i] = CsvHeader.Pop(string.Empty);
-                    continue;
-                }
-                if (exportSettings[i] != "A" && !exportSettings[i].Contains(type)) {
-                    m_headers[i] = CsvHeader.Pop(string.Empty);
-                    continue;
+    private bool ReadExcel(List<string> paths, char type, Action headAction, Action<char, IRow> rowAction) {
+        bool result;
+        for (int iPath = 0; iPath < paths.Count; iPath++) {
+            m_filePath = paths[iPath];
+            using (FileStream fs = new FileStream(m_filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
+                XSSFWorkbook workbook = new XSSFWorkbook(fs);
+                //只读取第一张表
+                ISheet sheet = workbook.GetSheetAt(0);
+                if (sheet == null) {
+                    Debug.LogError("ReadExcel Error Sheet:" + m_filePath);
+                    return false;
                 }
 
-                cell = headRow.GetCell(i);
-                if (cell == null) {
-                    m_headers[i] = CsvHeader.Pop(string.Empty);
-                    continue;
-                }
-
-                var cellType = m_cellTypes[i];
-                if (cellType == "define") {
-                    m_defineIndex = i;
-                    m_defineName = cell.StringCellValue;
-                    m_headers[i] = CsvHeader.Pop(string.Empty);
-                    continue;
-                }
-                if (cellType == "export") {
-                    m_exportIndex = i;
-                    m_headers[i] = CsvHeader.Pop(string.Empty);
-                    continue;
-                }
-
-                m_headers[i] = CsvHeader.Pop(cell.StringCellValue);
-                if (m_headers[i].type == eFieldType.Array && cellType.Length > 2
-                    && cellType.EndsWith("[]", StringComparison.OrdinalIgnoreCase)
-                    && m_headers[i].name == m_headers[i].baseName) {
-                    //去除结尾的[]
-                    m_cellTypes[i] = cellType.Substring(0, cellType.Length - 2);
-                }
-            }
-            int slot;
-            List<string> nodeSlots = new List<string>(1);
-            List<CsvNode> nodes = new List<CsvNode>(1);
-            for (int i = 0; i < m_headers.Length; i++) {
-                CsvHeader header = m_headers[i];
-                if (header.type == eFieldType.Primitive) {
-                    header.SetSlot(-1);
-                    continue;
-                }
-                slot = nodeSlots.IndexOf(header.baseName);
-                if (slot < 0) {
-                    nodeSlots.Add(header.baseName);
-                    header.SetSlot(nodeSlots.Count - 1);
-                    var node = CsvNode.Pop(header.baseName, header.type);
-                    var subTypes = m_rawTypes[i].Split(CsvConfig.arrayChars, CsvConfig.classSeparator);
-                    node.cellType = subTypes[0];
-                    nodes.Add(node);
-                }
-                else {
-                    header.SetSlot(slot);
-                }
-            }
-            if (nodeSlots.Count > 0) {
-                m_nodes = nodes.ToArray();
-            }
-            else {
-                m_nodes = new CsvNode[0];
-            }
-
-            headAction();
-
-            m_rawIds.Clear();
-            int startIndex = 4;// sheet.FirstRowNum;
-            int lastIndex = sheet.LastRowNum;
-            for (int index = startIndex; index <= lastIndex; index++) {
-                m_curIndex = index;
-                IRow row = sheet.GetRow(index);
-                if (row == null) {
-                    continue;
-                }
-
-                //跳过id为空，或者#号开头的行
-                cell = row.GetCell(0);
-                if (cell == null) {
-                    continue;
-                }
-                var obj = getCellValue(cell);
-                if (obj == null) {
-                    continue;
-                }
-                string id = obj.ToString();
-                if (string.IsNullOrEmpty(id) || id[0] == CsvConfig.skipFlag) {
-                    continue;
-                }
-
-                if (m_rawIds.IndexOf(id) >= 0) {
-                    Debug.LogError(m_filePath + " 重复id, index：" + index + " id:" + id);
-                    continue;
-                }
-                m_rawIds.Add(id);
-
-                if (m_exportIndex > 0) {
-                    var exportCell = row.GetCell(m_exportIndex);
-                    if (exportCell == null) {
-                        continue;
-                    }
-                    obj = getCellValue(exportCell);
-                    if (obj == null) {
-                        continue;
-                    }
-                    var exportStr = obj.ToString();
-                    if (exportStr != "A" && !exportStr.Contains(type)) {
-                        continue;
+                if (iPath == 0) {
+                    result = InitExcel(sheet, type, headAction);
+                    if (!result) {
+                        return false;
                     }
                 }
 
-                try {
-                    rowAction(type, row);
-                }
-                catch (Exception e) {
-                    Debug.LogError(m_filePath + " 转换错误, index：" + index + " info:" + obj + " \n" + e);
+                result = ReadExcel(sheet, type, rowAction);
+                if (!result) {
+                    return false;
                 }
             }
         }
+        return true;
+    }
+
+    private bool InitExcel(ISheet sheet, char type, Action headAction) {
+        m_sheetName = sheet.SheetName;
+
+        //第一行为表头，必定是最大列数
+        IRow nameRow = sheet.GetRow(0);
+        int cellCount = nameRow.LastCellNum;
+        //表头
+        IRow headRow = sheet.GetRow(1);
+        //导出类型
+        IRow typeRow = sheet.GetRow(2);
+        //导出服务器客户端
+        IRow exportRow = sheet.GetRow(3);
+
+        ICell cell = exportRow.GetCell(0);
+        if (cell == null || cell.StringCellValue == null) {
+            Debug.LogError("导出配置错误:" + m_filePath);
+            return false;
+        }
+        if (cell.StringCellValue != "A" && !cell.StringCellValue.Contains(type)) {
+            Debug.LogWarning("跳过导出:" + m_filePath);
+            return false;
+        }
+
+        //Debug.Log("导出:" + filePath);
+
+        string[] exportSettings = new string[cellCount];
+        for (int i = 0; i < cellCount; i++) {
+            cell = exportRow.GetCell(i);
+            if (cell == null) {
+                exportSettings[i] = string.Empty;
+                continue;
+            }
+            exportSettings[i] = cell.StringCellValue;
+        }
+
+        m_defineIndex = -1;
+        m_exportIndex = -1;
+
+        m_rawTypes = new string[cellCount];
+        m_cellTypes = new string[cellCount];
+        //第一列为id，只支持int，string
+        cell = typeRow.GetCell(0);
+        string value = cell.StringCellValue;
+        if (value[0] == CsvConfig.skipFlag) {
+            m_rawTypes[0] = value;
+            m_cellTypes[0] = value.Substring(1);
+        }
+        else {
+            m_rawTypes[0] = CsvConfig.skipFlag + value;
+            m_cellTypes[0] = value;
+        }
+        for (int i = 1; i < cellCount; i++) {
+            cell = typeRow.GetCell(i);
+            if (cell == null) {
+                continue;
+            }
+            value = cell.StringCellValue;
+            m_rawTypes[i] = value;
+            int pos = value.LastIndexOf(CsvConfig.classSeparator);
+            if (pos > 0) {
+                m_cellTypes[i] = value.Substring(pos + 1);
+            }
+            else {
+                m_cellTypes[i] = value;
+            }
+        }
+
+        m_headers = new CsvHeader[cellCount];
+        for (int i = 0; i < cellCount; i++) {
+            if (string.IsNullOrEmpty(exportSettings[i])) {
+                m_headers[i] = CsvHeader.Pop(string.Empty);
+                continue;
+            }
+            if (exportSettings[i] != "A" && !exportSettings[i].Contains(type)) {
+                m_headers[i] = CsvHeader.Pop(string.Empty);
+                continue;
+            }
+
+            cell = headRow.GetCell(i);
+            if (cell == null) {
+                m_headers[i] = CsvHeader.Pop(string.Empty);
+                continue;
+            }
+
+            var cellType = m_cellTypes[i];
+            if (cellType == "define") {
+                m_defineIndex = i;
+                m_defineName = cell.StringCellValue;
+                m_headers[i] = CsvHeader.Pop(string.Empty);
+                continue;
+            }
+            if (cellType == "export") {
+                m_exportIndex = i;
+                m_headers[i] = CsvHeader.Pop(string.Empty);
+                continue;
+            }
+
+            m_headers[i] = CsvHeader.Pop(cell.StringCellValue);
+            if (m_headers[i].type == eFieldType.Array && cellType.Length > 2
+                && cellType.EndsWith("[]", StringComparison.OrdinalIgnoreCase)
+                && m_headers[i].name == m_headers[i].baseName) {
+                //去除结尾的[]
+                m_cellTypes[i] = cellType.Substring(0, cellType.Length - 2);
+            }
+        }
+        int slot;
+        List<string> nodeSlots = new List<string>(1);
+        List<CsvNode> nodes = new List<CsvNode>(1);
+        for (int i = 0; i < m_headers.Length; i++) {
+            CsvHeader header = m_headers[i];
+            if (header.type == eFieldType.Primitive) {
+                header.SetSlot(-1);
+                continue;
+            }
+            slot = nodeSlots.IndexOf(header.baseName);
+            if (slot < 0) {
+                nodeSlots.Add(header.baseName);
+                header.SetSlot(nodeSlots.Count - 1);
+                var node = CsvNode.Pop(header.baseName, header.type);
+                var subTypes = m_rawTypes[i].Split(CsvConfig.arrayChars, CsvConfig.classSeparator);
+                node.cellType = subTypes[0];
+                nodes.Add(node);
+            }
+            else {
+                header.SetSlot(slot);
+            }
+        }
+        if (nodeSlots.Count > 0) {
+            m_nodes = nodes.ToArray();
+        }
+        else {
+            m_nodes = new CsvNode[0];
+        }
+
+        headAction();
+
+        m_rawIds.Clear();
+
+        return true;
+    }
+
+    private bool ReadExcel(ISheet sheet, char type, Action<char, IRow> rowAction) {
+        //         if (m_sheetName != sheet.SheetName) {
+        //             m_sheetName = sheet.SheetName;
+        //             Debug.LogError($"{m_filePath} sheet name error：{m_sheetName} / {sheet.SheetName}");
+        //             return false;
+        //         }
+
+        IRow nameRow = sheet.GetRow(0);
+        int cellCount = nameRow.LastCellNum;
+        if (m_cellTypes.Length != cellCount) {
+            Debug.LogError($"{m_filePath} 表头数量错误：{m_cellTypes.Length} / {cellCount}");
+            return false;
+        }
+
+        int startIndex = 4;// sheet.FirstRowNum;
+        int lastIndex = sheet.LastRowNum;
+        for (int index = startIndex; index <= lastIndex; index++) {
+            m_curIndex = index;
+            IRow row = sheet.GetRow(index);
+            if (row == null) {
+                continue;
+            }
+
+            //跳过id为空，或者#号开头的行
+            var cell = row.GetCell(0);
+            if (cell == null) {
+                continue;
+            }
+            var obj = getCellValue(cell);
+            if (obj == null) {
+                continue;
+            }
+            string id = obj.ToString();
+            if (string.IsNullOrEmpty(id) || id[0] == CsvConfig.skipFlag) {
+                continue;
+            }
+
+            if (m_rawIds.IndexOf(id) >= 0) {
+                Debug.LogError(m_filePath + " 重复id, index：" + index + " id:" + id);
+                continue;
+            }
+            m_rawIds.Add(id);
+
+            if (m_exportIndex > 0) {
+                var exportCell = row.GetCell(m_exportIndex);
+                if (exportCell == null) {
+                    continue;
+                }
+                obj = getCellValue(exportCell);
+                if (obj == null) {
+                    continue;
+                }
+                var exportStr = obj.ToString();
+                if (exportStr != "A" && !exportStr.Contains(type)) {
+                    continue;
+                }
+            }
+
+            try {
+                rowAction(type, row);
+            }
+            catch (Exception e) {
+                Debug.LogError(m_filePath + " 转换错误, index：" + index + " info:" + obj + " \n" + e);
+            }
+        }        
+        
         return true;
     }
 
