@@ -688,6 +688,10 @@ public class Logic {
         //         }
 
         IRow nameRow = sheet.GetRow(0);
+        if (nameRow == null) {
+            Debug.LogError($"{m_filePath} 表数据为空");
+            return false;
+        }
         int cellCount = nameRow.LastCellNum;
         if (m_cellTypes.Length != cellCount) {
             Debug.LogError($"{m_filePath} 表头数量错误：{m_cellTypes.Length} / {cellCount}");
