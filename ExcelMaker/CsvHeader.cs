@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace CsvHelper {
     /// <summary>
@@ -110,6 +112,66 @@ namespace CsvHelper {
             this.type = type;
         }
 
+        public int arrayRank { get; private set; } = -1;
+        public JTokenType jTokenType { get; private set; }
+        public void InitJToken(string cellType) {
+            if (arrayRank >= 0) {
+                return;
+            }
+            char lastTypeChar = cellType[cellType.Length - 1];
+            if (lastTypeChar != ']') {
+                arrayRank = 0;
+                jTokenType = JTokenType.Object;
+                return;
+            }
+            int i;
+            arrayRank = 1;
+            for (i = cellType.Length - 3; i > 0; i-=2) {
+                if (cellType[i] == ']') {
+                    ++arrayRank;
+                }
+                else {
+                    break;
+                }
+            }
+            string realType = cellType.Substring(0, i + 1);
+            switch (realType.ToLower()) {
+                case "bool":
+                    jTokenType = JTokenType.Boolean;
+                    break;
+                case "uint":
+                case "int":
+                case "ulong":
+                case "long":
+                    jTokenType = JTokenType.Integer;
+                    break;                
+                case "fixed":
+                case "float":
+                case "double":
+                    jTokenType = JTokenType.Float;
+                    break;
+                case "string":
+                    jTokenType = JTokenType.String;
+                    break;
+                default:
+                    jTokenType = JTokenType.Object;
+                    break;
+            }
+        }
+
+        public bool CheckJToken(JToken token) {
+            if (jTokenType == token.Type) {
+                return true;
+            }
+            if (jTokenType == JTokenType.Float) {
+                if (token.Type == JTokenType.Integer) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+
         private static ObjectPool<CsvHeader> m_pool = new ObjectPool<CsvHeader>();
         private static CsvHeader Pop() {
             CsvHeader header = m_pool.Pop();
@@ -123,6 +185,7 @@ namespace CsvHelper {
         }
 
         public static void Push(CsvHeader header) {
+            header.arrayRank = -1;
             header.skip = false;
             header.type = eFieldType.Primitive;
             header.name = string.Empty;

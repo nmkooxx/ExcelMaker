@@ -8,7 +8,7 @@ using System.Windows.Forms;
 /// 日志输出模板
 /// </summary>
 public static class Debug {
-    const int kLogMax = 150;
+    const int kLogMax = 90;
     const int kLogSpace = 10;
     private static Size m_logMaxSize;
     private static Queue<Label> m_logLabels;
@@ -64,6 +64,7 @@ public static class Debug {
             item.Top += height;
         }
         m_logLabels.Enqueue(label);
+        m_panel.Refresh();
         return label;
     }
 
@@ -84,6 +85,11 @@ public static class Debug {
     public static void LogError(string content) {
         Label label = popLogLabel(content);
         label.ForeColor = Color.Red;
+        m_streamWriter.WriteLine("Error\t" + content);
+        m_streamWriter.Flush();
+    }
+
+    public static void WriteError(string content) {
         m_streamWriter.WriteLine("Error\t" + content);
         m_streamWriter.Flush();
     }

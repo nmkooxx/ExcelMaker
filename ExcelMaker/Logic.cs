@@ -262,6 +262,7 @@ public class Logic {
     public void Export(string dirPath, bool sync,
         char type, ExportType exportType, ExportLanguage language, string codePath, bool exportCode) {
         s_exportLanguage = language;
+        m_logBuilder.Clear();
         switch (exportType) {
             case ExportType.Csv:
                 exportCsv(dirPath, sync, type, codePath, exportCode);
@@ -288,6 +289,7 @@ public class Logic {
         if (exportCode && s_exportLanguage == ExportLanguage.TypeScript) {
             CsvMaker_TypeScript.InitCatalog();
         }
+        m_logBuilder.AppendLine($"导出Csv type:{type} sync:{sync}");
         string headExtend;
         string csvExtend;
         string readerExtend;
@@ -299,6 +301,7 @@ public class Logic {
             var info = list[0];
             csvDir = info.folder;
             csvName = info.name;
+            m_fileName = info.name;
             if (!sync) {
                 //选择模式
                 if (!info.selected) {
@@ -347,7 +350,7 @@ public class Logic {
 
             File.WriteAllText(path, csvText);
             File.WriteAllText(localCsvPath, csvText);
-            Debug.Log("导出Csv:" + path);
+            m_logBuilder.AppendLine(path);
 
             if (exportCode) {
                 switch (s_exportLanguage) {
@@ -399,17 +402,19 @@ public class Logic {
                 CsvMaker_TypeScript.MakeCatalog(codePath);
             }
         }
-        Debug.Log("导出Csv完成:" + type);
+        Debug.Log(m_logBuilder.ToString());
     }
 
     private void exportJson(string dirPath, bool sync, char type) {
         int slot = 0;
         string csvName = null, csvDir = null, path = null;
         List<string> paths = new List<string>(8);
+        m_logBuilder.Append($"导出Json type:{type} sync:{sync}");
         foreach (var list in m_excelMap.Values) {
             var info = list[0];
             csvDir = info.folder;
             csvName = info.name;
+            m_fileName = info.name;
             if (!sync) {
                 //选择模式
                 if (!info.selected) {
@@ -451,9 +456,9 @@ public class Logic {
             text = Regex.Replace(text, "(?<!\r)\n|\r\n", "\n");
             File.WriteAllText(path, text);
 
-            Debug.Log("导出Json:" + path);
+            m_logBuilder.AppendLine(path);
         }
-        Debug.Log("导出Json完成:" + type);
+        Debug.Log(m_logBuilder.ToString());
     }
 
     private object getCellValue(ICell cell) {
@@ -487,11 +492,13 @@ public class Logic {
                     return cell.StringCellValue;
                 }
             default:
-                Debug.LogWarning("导出配置错误:" + m_filePath + " 未定义单元格类型：" + cell.CellType + " "  + cell.StringCellValue + " row:" + cell.RowIndex);
+                //Debug.LogWarning("导出配置错误:" + m_filePath + " 未定义单元格类型：" + cell.CellType + " "  + cell.StringCellValue + " row:" + cell.RowIndex);
+                LogError("未定义单元格类型：" + cell.CellType + " " + cell.StringCellValue + " row:" + cell.RowIndex);
                 return cell.StringCellValue;
         }
     }
 
+    private string m_fileName;
     private string m_filePath;
     private string m_sheetName;
     private CsvHeader[] m_headers;
@@ -508,12 +515,20 @@ public class Logic {
     /// </summary>
     private int m_exportIndex;
     private int m_curIndex;
-    private List<string> m_rawIds = new List<string>(1000);
+    private HashSet<string> m_rawIds = new HashSet<string>();
+    private int m_errorIdNum = 0;
+    private int m_errorNum = 0;
+    private StringBuilder m_errorIdBuilder = new StringBuilder();
+    private StringBuilder m_errorBuilder = new StringBuilder();
+    private StringBuilder m_logBuilder = new StringBuilder();
 
     private bool ReadExcel(List<string> paths, char type, Action headAction, Action<char, IRow> rowAction) {
         bool result;
         for (int iPath = 0; iPath < paths.Count; iPath++) {
             m_filePath = paths[iPath];
+            m_errorBuilder.Clear();
+            m_errorNum = 0;
+            m_errorBuilder.AppendLine("路径：" + m_filePath);
             using (FileStream fs = new FileStream(m_filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) {
                 XSSFWorkbook workbook = new XSSFWorkbook(fs);
                 //只读取第一张表
@@ -523,18 +538,44 @@ public class Logic {
                     return false;
                 }
 
+                //导出服务器客户端
+                IRow exportRow = sheet.GetRow(3);
+                ICell cell = exportRow.GetCell(0);
+                if (cell == null || cell.StringCellValue == null) {
+                    Debug.LogError("导出配置错误:" + m_filePath);
+                    return false;
+                }
+                if (cell.StringCellValue != "A" && !cell.StringCellValue.Contains(type)) {
+                    Debug.LogWarning("跳过导出:" + m_filePath);
+                    return false;
+                }
+
                 if (iPath == 0) {
                     result = InitExcel(sheet, type, headAction);
                     if (!result) {
+                        Debug.LogError("InitExcel Fail path:" + m_filePath);
+                        DOLogError();
                         return false;
                     }
                 }
 
+                m_errorIdBuilder.AppendLine("路径：" + m_filePath);
                 result = ReadExcel(sheet, type, rowAction);
                 if (!result) {
+                    Debug.LogError("ReadExcel Fail path:" + m_filePath);
+                    DOLogError();
                     return false;
                 }
+
+                DOLogError();
             }
+        }
+
+        if (m_errorIdNum > 0) {
+            Debug.LogError($"{m_fileName} 重复id数量：{m_errorIdNum}，详见ExcelMakerLog.txt");
+            m_errorIdBuilder.Insert(0, $"{m_fileName} 重复id数量:{m_errorIdNum}  列表：\n");
+            Debug.WriteError(m_errorIdBuilder.ToString());
+            m_errorIdBuilder.Clear();
         }
         return true;
     }
@@ -552,18 +593,7 @@ public class Logic {
         //导出服务器客户端
         IRow exportRow = sheet.GetRow(3);
 
-        ICell cell = exportRow.GetCell(0);
-        if (cell == null || cell.StringCellValue == null) {
-            Debug.LogError("导出配置错误:" + m_filePath);
-            return false;
-        }
-        if (cell.StringCellValue != "A" && !cell.StringCellValue.Contains(type)) {
-            Debug.LogWarning("跳过导出:" + m_filePath);
-            return false;
-        }
-
-        //Debug.Log("导出:" + filePath);
-
+        ICell cell;
         string[] exportSettings = new string[cellCount];
         for (int i = 0; i < cellCount; i++) {
             cell = exportRow.GetCell(i);
@@ -676,6 +706,8 @@ public class Logic {
         headAction();
 
         m_rawIds.Clear();
+        m_errorIdNum = 0;
+        m_errorIdBuilder.Clear();
 
         return true;
     }
@@ -721,8 +753,10 @@ public class Logic {
                 continue;
             }
 
-            if (m_rawIds.IndexOf(id) >= 0) {
-                Debug.LogError(m_filePath + " 重复id, index：" + index + " id:" + id);
+            if (m_rawIds.Contains(id)) {
+                m_errorIdBuilder.AppendLine("index：" + index + " id:" + id);
+                ++m_errorIdNum;
+                //Debug.LogError(m_filePath + " 重复id, index：" + index + " id:" + id);                
                 continue;
             }
             m_rawIds.Add(id);
@@ -746,11 +780,25 @@ public class Logic {
                 rowAction(type, row);
             }
             catch (Exception e) {
-                Debug.LogError(m_filePath + " 转换错误, index：" + index + " info:" + obj + " \n" + e);
+                ++m_errorNum;
+                LogError("转换错误, index：" + index + " info:" + obj + " \n" + e);
+                //Debug.LogError(m_filePath + " 转换错误, index：" + index + " info:" + obj + " \n" + e);
             }
         }        
         
         return true;
+    }
+
+    private void LogError(string info) {
+        ++m_errorNum;
+        m_errorBuilder.AppendLine(info);
+    }
+
+    private void DOLogError() {
+        if (m_errorNum <= 0) {
+            return;
+        }
+        Debug.LogError(m_errorBuilder.ToString());
     }
 
     /// <summary>
@@ -851,17 +899,20 @@ public class Logic {
                 case "fixed":
                     //Debug.Log("value:" + value + " type:" + value.GetType());
                     if (value is string) {
-                        Debug.LogError(m_filePath + " 数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        //Debug.LogError(m_filePath + " 数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError("数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                     else if (value.ToString().IndexOf('.') >= 0) {
-                        Debug.LogError(m_filePath + " 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        //Debug.LogError(m_filePath + " 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError("整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                     m_csvBuilder.Append(value);
                     break;
                 case "float":
                 case "double":
                     if (value is string) {
-                        Debug.LogError(m_filePath + " 小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        //Debug.LogError(m_filePath + " 小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError("小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                     m_csvBuilder.Append(value);
                     break;
@@ -872,33 +923,18 @@ public class Logic {
                     //对象结构需要引号包起来
                     info = value.ToString();
                     if (info.Length <= 0) {
-                        Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError("扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                         break;
                     }
                     if (cell.CellType == CellType.String) {
-                        bool isJson = false;
-                        char frist = info[0];
-                        char last = info[info.Length - 1];
-                        if ((frist == '[' && last == ']') || (frist == '{' && last == '}')) {
-                            isJson = true;
-                            //检查Json格式
-                            try {
-                                var obj = JsonConvert.DeserializeObject(info);
-                            }
-                            catch (Exception e) {
-                                Debug.LogError(m_filePath + " Json格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                            }
-                        }
-                        else {
-                            if (!IsEnum(cellType) && header.subs == null) {
-                                Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                            }
-                        }
+                        bool isJson = CheckJsonFormat(cellType, info, header);                        
                         m_csvBuilder.Append(packString(info, isJson));
                     }
                     else {
                         if (!IsEnum(cellType) && header.subs == null) {
-                            Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                            //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                            LogError("扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                         }
                         m_csvBuilder.Append(packString(info, false));
                     }
@@ -940,6 +976,70 @@ public class Logic {
         }
     }
 
+    private bool CheckJsonFormat(string cellType, string info, CsvHeader header) {
+        char lastTypeChar = cellType[cellType.Length - 1];
+        char lastInfoChar = info[info.Length - 1];
+        if (lastTypeChar == ']') {
+            if (lastInfoChar != ']') {
+                LogError("Json数组[]格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
+                return true;
+            }
+            CheckJsonArray(cellType, info, header);
+            return true;
+        }
+        else {
+            if (lastInfoChar != '}') {
+                if (!IsEnum(cellType) && header.subs == null) {
+                    //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    LogError("扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
+                }
+                return false;
+            }
+
+            CheckJsonClass(cellType, info, header);
+            return true;
+        }
+    }
+
+    private void CheckJsonArray(string cellType, string info, CsvHeader header) {
+        header.InitJToken(cellType);
+
+        //检查Json格式
+        try {
+            var array = JsonConvert.DeserializeObject(info) as JArray;
+            if (array == null) {
+                LogError("Json数组格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
+                return;
+            }
+            var token = array.First;
+            for (int rank = header.arrayRank - 2; rank >= 0; rank--) {
+                if (!token.HasValues) {
+                    LogError("Json数组维度错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
+                    return;
+                }
+                token = token.First;
+            }
+            if (!header.CheckJToken(token)) {
+                LogError("Json数组内数据类型错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
+            }
+        }
+        catch (Exception e) {
+            //Debug.LogError(m_filePath + " Json数组格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+            LogError("Json数组解析错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
+        }
+
+    }
+
+    private void CheckJsonClass(string cellType, string info, CsvHeader header) {
+        //检查Json格式
+        try {
+            var obj = JsonConvert.DeserializeObject(info);
+        }
+        catch (Exception e) {
+            //Debug.LogError(m_filePath + " Json格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+            LogError("Json对象解析错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
+        }
+    }
 
     private JsonSerializerSettings m_jsonSettings;
     private JObject m_jObject;
@@ -998,7 +1098,8 @@ public class Logic {
                 default:
                     info = value.ToString();
                     if (info.Length <= 0) {
-                        Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        //Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError("格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                         continue;
                     }
                     if (cell.CellType == CellType.String) {
@@ -1010,7 +1111,8 @@ public class Logic {
                         }
                         else {
                             if (!IsEnum(cellType) && header.subs == null) {
-                                Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                                //Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                                Debug.LogError("格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                             }
                         }
                         if (isJson) {
@@ -1022,7 +1124,8 @@ public class Logic {
                     }
                     else {
                         if (!IsEnum(cellType) && header.subs == null) {
-                            Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                            //Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                            LogError("格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                         }
                         token = JToken.FromObject(Convert.ToInt32(value));
                     }
@@ -1034,7 +1137,8 @@ public class Logic {
             }
             else {
                 if (header.slot < 0) {
-                    Debug.LogError(m_filePath + " lineToCsv map error:" + csv["id"] + " field:" + header.name + " " + header.baseName);
+                    //Debug.LogError(m_filePath + " lineToCsv map error:" + csv["id"] + " field:" + header.name + " " + header.baseName);
+                    LogError("rowToJson map error:" + csv["id"] + " field:" + header.name + " " + header.baseName);
                     continue;
                 }
                 node = m_nodes[header.slot];
