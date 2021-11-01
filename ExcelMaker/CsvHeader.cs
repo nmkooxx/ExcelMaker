@@ -112,6 +112,14 @@ namespace CsvHelper {
             this.type = type;
         }
 
+        public static string[] s_VectorTypes = {
+            "vector2",
+            "vector3",
+            "vector4",
+            "vector2int",
+            "vector3int",
+        };
+
         public int arrayRank { get; private set; } = -1;
         public JTokenType jTokenType { get; private set; }
         public void InitJToken(string cellType) {
@@ -122,6 +130,21 @@ namespace CsvHelper {
             if (lastTypeChar != ']') {
                 arrayRank = 0;
                 jTokenType = JTokenType.Object;
+                switch (cellType.ToLower()) {
+                    case "vector2":
+                    case "vector3":
+                    case "vector4":
+                        ++arrayRank;
+                        jTokenType = JTokenType.Float;
+                        break;
+                    case "vector2int":
+                    case "vector3int":
+                        ++arrayRank;
+                        jTokenType = JTokenType.Integer;
+                        break;
+                    default:
+                        break;
+                }
                 return;
             }
             int i;
@@ -152,6 +175,17 @@ namespace CsvHelper {
                     break;
                 case "string":
                     jTokenType = JTokenType.String;
+                    break;
+                case "vector2":
+                case "vector3":
+                case "vector4":
+                    ++arrayRank;
+                    jTokenType = JTokenType.Float;
+                    break;
+                case "vector2int":
+                case "vector3int":
+                    ++arrayRank;
+                    jTokenType = JTokenType.Integer;
                     break;
                 default:
                     jTokenType = JTokenType.Object;

@@ -890,57 +890,45 @@ public class Logic {
             if (string.IsNullOrEmpty(cellType)) {
                 continue;
             }
-            switch (cellType.ToLower()) {
-                case "bool":
-                case "uint":
-                case "int":
-                case "ulong":
-                case "long":
-                case "fixed":
-                    //Debug.Log("value:" + value + " type:" + value.GetType());
-                    if (value is string) {
-                        //Debug.LogError(m_filePath + " 数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                        LogError("数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+
+            bool isSpreadArray = false;
+            if (header.subs != null) {
+                int subLen = header.subs.Length;
+                if (header.subs[subLen - 2].type == eFieldType.Array && header.subs[subLen - 1].type == eFieldType.Primitive) {
+                    isSpreadArray = true;
+                }
+            }
+            if (isSpreadArray) {
+                if (cellType.Length > 2) {
+                    cellType = cellType.Substring(0, cellType.Length - 2);
+                }
+                else {
+                    if (m_curIndex < 10) {
+                        LogError("表头过小, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
-                    else if (value.ToString().IndexOf('.') >= 0) {
-                        //Debug.LogError(m_filePath + " 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                        LogError("整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                    }
-                    m_csvBuilder.Append(value);
+                }
+            }
+            bool isSimple = CheckSimpleFormat(cellType, value, header);
+            if (!isSimple) {
+                //对象结构需要引号包起来
+                info = value.ToString();
+                if (info.Length <= 0) {
+                    //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    LogError("扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     break;
-                case "float":
-                case "double":
-                    if (value is string) {
-                        //Debug.LogError(m_filePath + " 小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                        LogError("小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                    }
-                    m_csvBuilder.Append(value);
-                    break;
-                case "string":
-                    m_csvBuilder.Append(packString(value.ToString(), false));
-                    break;
-                default:
-                    //对象结构需要引号包起来
-                    info = value.ToString();
-                    if (info.Length <= 0) {
+                }
+                if (cell.CellType == CellType.String) {
+                    bool isJson = CheckJsonFormat(cellType, info, header);
+                    m_csvBuilder.Append(packString(info, isJson));
+                }
+                else {
+                    if (!IsEnum(cellType) && header.subs == null) {
                         //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                         LogError("扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                        break;
                     }
-                    if (cell.CellType == CellType.String) {
-                        bool isJson = CheckJsonFormat(cellType, info, header);                        
-                        m_csvBuilder.Append(packString(info, isJson));
-                    }
-                    else {
-                        if (!IsEnum(cellType) && header.subs == null) {
-                            //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                            LogError("扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                        }
-                        m_csvBuilder.Append(packString(info, false));
-                    }
-                    break;
+                    m_csvBuilder.Append(packString(info, false));
+                }
             }
-
         }
         m_csvBuilder.Append("\n");
 
@@ -976,6 +964,69 @@ public class Logic {
         }
     }
 
+    private bool CheckSimpleFormat(string cellType, object value, CsvHeader header) {
+        switch (cellType.ToLower()) {
+            case "bool":
+                if (value is string) {
+                    //Debug.LogError(m_filePath + " 数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    LogError("bool格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                }
+                else {
+                    var info = value.ToString();
+                    if (info != "1" && info != "0") {
+                        //Debug.LogError(m_filePath + " 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError("bool格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    }
+                }
+                break;
+            case "uint":
+            case "ulong":
+                if (value is string) {
+                    //Debug.LogError(m_filePath + " 数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    LogError("正整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                }
+                else {
+                    var info = value.ToString();
+                    if (info.IndexOf('.') >= 0) {
+                        //Debug.LogError(m_filePath + " 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError("正整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    }
+                    else if (info[0] == '-') {
+                        LogError("正整数填写了负数, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    }
+                }
+                break;
+            case "int":
+            case "long":
+            case "fixed":
+                //Debug.Log("value:" + value + " type:" + value.GetType());
+                if (value is string) {
+                    //Debug.LogError(m_filePath + " 数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    LogError("整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                }
+                else if (value.ToString().IndexOf('.') >= 0) {
+                    //Debug.LogError(m_filePath + " 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    LogError("整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                }
+                m_csvBuilder.Append(value);
+                break;
+            case "float":
+            case "double":
+                if (value is string) {
+                    //Debug.LogError(m_filePath + " 小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    LogError("小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                }
+                m_csvBuilder.Append(value);
+                break;
+            case "string":
+                m_csvBuilder.Append(packString(value.ToString(), false));
+                break;
+            default:
+                return false;
+        }
+        return true;
+    }
+
     private bool CheckJsonFormat(string cellType, string info, CsvHeader header) {
         char lastTypeChar = cellType[cellType.Length - 1];
         char lastInfoChar = info[info.Length - 1];
@@ -989,6 +1040,10 @@ public class Logic {
         }
         else {
             if (lastInfoChar != '}') {
+                if (lastInfoChar == ']') {
+                    CheckJsonArray(cellType, info, header);
+                    return true;
+                }
                 if (!IsEnum(cellType) && header.subs == null) {
                     //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     LogError("扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
