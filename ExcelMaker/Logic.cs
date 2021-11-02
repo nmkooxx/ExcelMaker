@@ -978,6 +978,7 @@ public class Logic {
                         LogError("bool格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                 }
+                m_csvBuilder.Append(value);
                 break;
             case "uint":
             case "ulong":
@@ -995,6 +996,7 @@ public class Logic {
                         LogError("正整数填写了负数, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                 }
+                m_csvBuilder.Append(value);
                 break;
             case "int":
             case "long":
