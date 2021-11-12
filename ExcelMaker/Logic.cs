@@ -182,6 +182,8 @@ public class Logic {
         public int index { get; }
         public bool selected;
 
+        public string nameWithDir;
+
         public ExcelInfo(string path, int index, DirectoryInfo root) {
             this.path = path;
             this.index = index;
@@ -232,11 +234,10 @@ public class Logic {
 
         m_excelInfos.Clear();
         excelList.Items.Clear();
-        //m_excelPaths = Directory.GetFiles(m_config.rootPath, "*.xls|*.xlsx", SearchOption.AllDirectories);
         int offset = m_config.rootPath.Length + 1;
-        string[] paths = Directory.GetFiles(m_config.rootPath, "*.xlsx", SearchOption.AllDirectories);
-        for (int i = 0; i < paths.Length; i++) {
-            string path = paths[i];
+        //var paths = Directory.GetFiles(m_config.rootPath, "*.*", SearchOption.AllDirectories).Where(s => s.EndsWith(".xlsx") || s.EndsWith(".csv"));
+        var paths = Directory.GetFiles(m_config.rootPath, "*.xlsx", SearchOption.AllDirectories);
+        foreach (var path in paths) {
             if (path.IndexOf('~') >= 0) {
                 continue;
             }
@@ -246,6 +247,12 @@ public class Logic {
             //默认选中
             excelList.SetItemChecked(index, true);
             var info = new ExcelInfo(path, index, m_rootInfo);
+            if (info.folder == null) {
+                info.nameWithDir = str;
+            }
+            else {
+                info.nameWithDir = str.Substring(str.IndexOf(info.folder));
+            }
             info.selected = true;
             m_excelInfos.Add(info);
             if (!m_excelMap.TryGetValue(info.id, out var list)) {
@@ -257,6 +264,8 @@ public class Logic {
 
         Debug.Log("路径扫描完成，总计文件个数：" + m_excelInfos.Count);
     }
+
+    public bool keep = false;
 
     private static ExportLanguage s_exportLanguage;
     public void Export(string dirPath, bool sync,
@@ -337,15 +346,36 @@ public class Logic {
                 }
             }
 
+            bool need;
+            string csvText;
+            if (keep) {
+                m_logBuilder.AppendLine(path);
+                foreach (var item in list) {
+                    paths.Clear();
+                    paths.Add(item.path);
+                    need = ReadExcel(paths, type, initCsv, rowToCsv);
+                    if (!need) {
+                        continue;
+                    }
+                    csvText = m_csvBuilder.ToString();
+                    csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
+
+                    localCsvPath = localPath + "/" + item.nameWithDir.Replace(".xlsx", ".csv");
+                    File.WriteAllText(localCsvPath, csvText);
+                }
+
+                continue;
+            }
+
             paths.Clear();
             foreach (var item in list) {
                 paths.Add(item.path);
             }            
-            bool need = ReadExcel(paths, type, initCsv, rowToCsv);
+            need = ReadExcel(paths, type, initCsv, rowToCsv);
             if (!need) {
                 continue;
             }
-            string csvText = m_csvBuilder.ToString();
+            csvText = m_csvBuilder.ToString();
             csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
 
             File.WriteAllText(path, csvText);

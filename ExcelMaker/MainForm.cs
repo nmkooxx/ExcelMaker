@@ -62,12 +62,14 @@ public partial class MainForm : Form {
 	}
 
     private void btn_exportServer_Click(object sender, EventArgs e) {
+        m_Logic.keep = check_keep.Checked;
         m_Logic.Export(config.serverPath, false,
             'S', (ExportType)setting.serverExportType, (ExportLanguage)setting.serverLanguage,
             config.serverCodePath, check_serverCode.Checked);
     }
 
     private void btn_exportClient_Click(object sender, EventArgs e) {
+        m_Logic.keep = check_keep.Checked;
         m_Logic.Export(config.clientPath, false,
             'C', (ExportType)setting.clientExportType, (ExportLanguage)setting.clientLanguage,
             config.clientCodePath, check_clientCode.Checked);

@@ -49,6 +49,7 @@ partial class MainForm {
             this.label1 = new System.Windows.Forms.Label();
             this.btn_syncServer = new System.Windows.Forms.Button();
             this.btn_syncClient = new System.Windows.Forms.Button();
+            this.check_keep = new System.Windows.Forms.CheckBox();
             this.group_serverExportType.SuspendLayout();
             this.group_clientExportType.SuspendLayout();
             this.SuspendLayout();
@@ -322,11 +323,22 @@ partial class MainForm {
             this.btn_syncClient.UseVisualStyleBackColor = true;
             this.btn_syncClient.Click += new System.EventHandler(this.btn_syncClient_Click);
             // 
+            // check_keep
+            // 
+            this.check_keep.AutoSize = true;
+            this.check_keep.Location = new System.Drawing.Point(193, 177);
+            this.check_keep.Name = "check_keep";
+            this.check_keep.Size = new System.Drawing.Size(72, 16);
+            this.check_keep.TabIndex = 32;
+            this.check_keep.Text = "原件导出";
+            this.check_keep.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1177, 968);
+            this.Controls.Add(this.check_keep);
             this.Controls.Add(this.btn_syncClient);
             this.Controls.Add(this.btn_syncServer);
             this.Controls.Add(this.label1);
@@ -390,5 +402,6 @@ partial class MainForm {
     private System.Windows.Forms.Label label1;
     private System.Windows.Forms.Button btn_syncServer;
     private System.Windows.Forms.Button btn_syncClient;
+    private System.Windows.Forms.CheckBox check_keep;
 }
 
