@@ -839,12 +839,11 @@ public class Logic {
     /// <returns></returns>
     private string packString(string rawString, bool force) {
         string newString = rawString;
-        if (rawString.IndexOf(CsvConfig.quote) > 0) {
-            //在非第一个字符串中出现引号，则需要替换
-            newString = newString.Replace("\"", "\"\"");
-        }
-
         if (force || rawString.IndexOf(CsvConfig.delimiter) > 0) {
+            if (rawString.IndexOf(CsvConfig.quote) > 0) {
+                //在非第一个字符串中出现引号，则需要替换
+                newString = newString.Replace("\"", "\"\"");
+            }
             //出现逗号分隔符，需要包裹
             newString = string.Format("\"{0}\"", newString);
         }
