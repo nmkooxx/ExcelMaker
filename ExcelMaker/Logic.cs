@@ -848,6 +848,16 @@ public class Logic {
             newString = string.Format("\"{0}\"", newString);
         }
 
+        //多语言表才可能出现复杂的格式
+        if (m_fileName == "Localize") {
+            if (newString.IndexOf("\n") > 0
+            || newString.IndexOf("\t") > 0
+            || newString.IndexOf("\\") > 0
+            ) {
+                newString += ",1";
+            }
+        }
+
         return newString;
     }
 
