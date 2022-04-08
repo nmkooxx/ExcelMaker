@@ -850,11 +850,25 @@ public class Logic {
 
         //多语言表才可能出现复杂的格式
         if (m_fileName == "Localize") {
+            newString = newString.Replace("\n\r", "\\n")
+                .Replace("\r\n", "\\n")
+                .Replace("\r", "\\n")
+                .Replace("\n", "\\n")
+                .Replace("\t", "\\t")
+                ;
             if (newString.IndexOf("\n") > 0
             || newString.IndexOf("\t") > 0
             || newString.IndexOf("\\") > 0
             ) {
                 newString += ",1";
+            }
+        }
+        else {
+            if (newString.IndexOf("\n") > 0
+            || newString.IndexOf("\t") > 0
+            || newString.IndexOf("\\") > 0
+            ) {
+                LogError("文本含特殊符号, index：" + m_curIndex + " info:" + rawString);
             }
         }
 
