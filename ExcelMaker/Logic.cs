@@ -837,7 +837,7 @@ public class Logic {
     /// </summary>
     /// <param name="rawString"></param>
     /// <returns></returns>
-    private string packString(string rawString, bool force) {
+    private string packString(string rawString, bool force, int slot) {
         string newString = rawString;
         if (force || rawString.IndexOf(CsvConfig.delimiter) > 0) {
             if (rawString.IndexOf(CsvConfig.quote) > 0) {
@@ -861,6 +861,11 @@ public class Logic {
             || newString.IndexOf("\\") > 0
             ) {
                 newString += ",1";
+            }
+            else {
+                if (slot > 0) {
+                    newString += ",";
+                }
             }
         }
         else {
@@ -886,6 +891,10 @@ public class Logic {
             }
             m_csvBuilder.Append(CsvConfig.delimiter);
             m_csvBuilder.Append(header.name);
+        }
+        if (m_fileName == "Localize") {
+            m_csvBuilder.Append(CsvConfig.delimiter);
+            m_csvBuilder.Append("needParse");
         }
         m_csvBuilder.Append("\n");
 
@@ -961,7 +970,7 @@ public class Logic {
                     }
                 }
             }
-            bool isSimple = CheckSimpleFormat(cellType, value, header);
+            bool isSimple = CheckSimpleFormat(cellType, value, header, rank);
             if (!isSimple) {
                 //对象结构需要引号包起来
                 info = value.ToString();
@@ -972,14 +981,14 @@ public class Logic {
                 }
                 if (cell.CellType == CellType.String) {
                     bool isJson = CheckJsonFormat(cellType, info, header);
-                    m_csvBuilder.Append(packString(info, isJson));
+                    m_csvBuilder.Append(packString(info, isJson, rank));
                 }
                 else {
                     if (!IsEnum(cellType) && header.subs == null) {
                         //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                         LogError("扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
-                    m_csvBuilder.Append(packString(info, false));
+                    m_csvBuilder.Append(packString(info, false, rank));
                 }
             }
         }
@@ -1017,7 +1026,7 @@ public class Logic {
         }
     }
 
-    private bool CheckSimpleFormat(string cellType, object value, CsvHeader header) {
+    private bool CheckSimpleFormat(string cellType, object value, CsvHeader header, int slot) {
         switch (cellType.ToLower()) {
             case "bool":
                 if (value is string) {
@@ -1074,7 +1083,7 @@ public class Logic {
                 m_csvBuilder.Append(value);
                 break;
             case "string":
-                m_csvBuilder.Append(packString(value.ToString(), false));
+                m_csvBuilder.Append(packString(value.ToString(), false, slot));
                 break;
             default:
                 return false;
