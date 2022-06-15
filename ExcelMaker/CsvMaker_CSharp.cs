@@ -10,11 +10,16 @@ public class CsvMaker_CSharp {
     static string TemplateClass = @"using System;
 using UnityEngine;
 #headerfile#
-public partial class @className : CsvTemplate<@classKey>, IByteReadable
+public sealed partial class @className : CsvTemplate<@classKey>, IByteReadable
 #if UNITY_EDITOR
     , CsvHelper.IByteWriteable
 #endif
-{#property#
+{
+    private @classKey c_id;
+    public @classKey id {
+        get { return c_id; }
+        set { c_id = value; }
+    }#property#
 
     public void SetField(string field, string text) {
         switch (field) {#BaseCase#
@@ -31,8 +36,6 @@ public partial class @className : CsvTemplate<@classKey>, IByteReadable
     }
 
     public void Deserialize(ByteReader reader) {
-        reader.Read(ref c_id);
-
         byte t_tag = 0;
         while (reader.TryReadTag(ref t_tag)) {
             switch (t_tag) {#ByteRead#
@@ -44,17 +47,21 @@ public partial class @className : CsvTemplate<@classKey>, IByteReadable
     }
 
 #if UNITY_EDITOR
-    public void Serialize(CsvHelper.ByteWriter writer) {
-        writer.Write(c_id);
-        #ByteWrite#
+    public void Serialize(CsvHelper.ByteWriter writer) {#ByteWrite#
     }
 #endif
 }
 
-public partial class @classNameReader : CsvReader<@classKey, @className> {
+public sealed partial class @classNameReader : CsvReader<@classKey, @className> {
+    protected override void InitKeys() {
+        for (int i = 0; i < m_Keys.Length; i++) {
+            m_ByteReader.Read(ref m_Keys[i]);
+            m_id2Indexs[m_Keys[i]] = i;
+        }
+    }
 }
 
-public partial class Csv {
+public sealed partial class Csv {
     private static @classNameReader m_@class = null;
     public static @classNameReader @class {
         get {
@@ -86,7 +93,7 @@ public partial class Csv {
         #endif
     }";
 
-    public static string TemplateDefineClass = @"public partial class @className {
+    public static string TemplateDefineClass = @"public sealed partial class @className {
 #property#
 }
 ";
@@ -326,8 +333,10 @@ public partial class Csv {
                 byteWriteBuilder.Append(byteWrite);
             }
 
-            template = templateProperty.Replace("@type", typeName).Replace("@name", fieldName);
-            propertyBuilder.Append(template);
+            if (idx != 0) {
+                template = templateProperty.Replace("@type", typeName).Replace("@name", fieldName);
+                propertyBuilder.Append(template);
+            }
         }
 
         string fileCsvUpper = fileCsv.Substring(0, 1).ToUpper() + fileCsv.Substring(1);
