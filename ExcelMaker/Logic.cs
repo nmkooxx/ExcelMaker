@@ -601,6 +601,8 @@ public class Logic {
             }
         }
 
+        m_Localizes.Clear();
+
         if (m_errorIdNum > 0) {
             Debug.LogError($"{m_fileName} 重复id数量：{m_errorIdNum}，详见ExcelMakerLog.txt");
             m_errorIdBuilder.Insert(0, $"{m_fileName} 重复id数量:{m_errorIdNum}  列表：\n");
@@ -831,6 +833,10 @@ public class Logic {
         Debug.LogError(m_errorBuilder.ToString());
     }
 
+    private object m_curId;
+    private Dictionary<string, string> m_Localizes = new Dictionary<string, string>();
+    private const string kLocalizeRefTag = "[id=";
+
     /// <summary>
     /// 将含有特殊符号的字符串包裹起来
     /// 不支持Json格式的String[]
@@ -856,6 +862,34 @@ public class Logic {
                 .Replace("\n", "\\n")
                 .Replace("\t", "\\t")
                 ;
+
+            int startIdx = newString.IndexOf(kLocalizeRefTag);
+            if (startIdx >= 0) {
+                while (startIdx >= 0) {
+                    int keyStartIdx = startIdx + kLocalizeRefTag.Length;
+                    int endIdx = newString.IndexOf("]", startIdx);
+                    if (endIdx <= keyStartIdx) {
+                        //找不到就报错，跳出替换
+                        LogError($"多语言找不到替换内容, index：{m_curIndex} startIdx:{startIdx} info:{rawString}");
+                        startIdx = -1;
+                        break;
+                    }
+                    string key = newString.Substring(keyStartIdx, endIdx - keyStartIdx);
+                    if (!m_Localizes.TryGetValue(key, out var value)) {
+                        //找不到就报错，跳出替换
+                        LogError($"多语言找不到替换内容, index：{m_curIndex} key:{key} info:{rawString}");
+                        startIdx = -1;
+                        break;
+                    }
+                    newString = newString.Replace(kLocalizeRefTag + key + "]", value);
+                    startIdx = newString.IndexOf(kLocalizeRefTag, startIdx);
+                }
+            }
+            else {
+                //不同的多语言会覆盖之前的，简单无需解析的id要填前面
+                m_Localizes[m_curId.ToString()] = newString;
+            }
+
             if (newString.IndexOf("\n") > 0
             || newString.IndexOf("\t") > 0
             || newString.IndexOf("\\") > 0
@@ -939,7 +973,7 @@ public class Logic {
 
             if (rank != 0) {
                 m_csvBuilder.Append(CsvConfig.delimiter);
-            }
+            }            
             ICell cell = row.GetCell(rank);
             if (cell == null) {
                 continue;
@@ -969,6 +1003,9 @@ public class Logic {
                         LogError("表头过小, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                 }
+            }
+            if (rank == 0) {
+                m_curId = value;
             }
             bool isSimple = CheckSimpleFormat(cellType, value, header, rank);
             if (!isSimple) {
