@@ -35,15 +35,7 @@ public sealed partial class @className : CsvTemplate<@classKey>, IByteReadable
         }
     }
 
-    public void Deserialize(ByteReader reader) {
-        byte t_tag = 0;
-        while (reader.TryReadTag(ref t_tag)) {
-            switch (t_tag) {#ByteRead#
-                default:
-                    Debug.LogError($""@className.Deserialize error id:{c_id} tag:{t_tag}"");
-                    break;
-            }
-        }
+    public void Deserialize(ByteReader reader) {#ByteRead#
     }
 
 #if UNITY_EDITOR
@@ -93,6 +85,18 @@ public sealed partial class Csv {
         #endif
     }";
 
+    static string TemplatePathKeyProperty = @"
+    private Int32 c_@name;
+    public String @name {
+        get {
+            string path = Cfg.PathKey.Convert(c_@name);
+            if (string.IsNullOrEmpty(path)) {
+                Debug.LogError($""{GetType()} id:{c_id} can't find PathKey:{c_@name}"");
+            }
+            return path;
+        }
+    }";
+
     public static string TemplateDefineClass = @"public sealed partial class @className {
 #property#
 }
@@ -102,25 +106,47 @@ public sealed partial class Csv {
     public const @type @name = @value;";
 
     static string TemplateSimpeRead = @"
+        reader.Read(ref c_@name);";
+
+    static string TemplateClassRead = @"
+        c_@name = @typeConverter.Inst.Read@funName(reader);";
+
+    static string TemplateSimpeWrite = @"
+        writer.Write(c_@name);";
+
+    static string TemplateClassWrite = @"
+        @typeConverter.Inst.Write(writer, c_@name);";
+
+    static string TemplateSparseRead = @"
+        byte t_tag = 0;
+        while (reader.TryReadTag(ref t_tag)) {
+            switch (t_tag) {#ByteRead#
+                default:
+                    Debug.LogError($""@className.Deserialize error id:{c_id} tag:{t_tag}"");
+                    break;
+            }
+        }";
+
+    static string TemplateSparseSimpeRead = @"
                 case @tag:
                     reader.Read(ref c_@name);
                     break;";
 
-    static string TemplateClassRead = @"
+    static string TemplateSparseClassRead = @"
                 case @tag:
                     c_@name = @typeConverter.Inst.Read@funName(reader);
                     break;";
 
-    static string TemplateSimpeWrite = @"
+    static string TemplateSparseSimpeWrite = @"
         writer.Write(c_@name, @tag);";
 
-    static string TemplateClassWrite = @"
+    static string TemplateSparseClassWrite = @"
         @typeConverter.Inst.Write(writer, c_@name, @tag);";
 
     static string mSuffixName = ".cs";
 
-    private static string GetSysType(string typeName, out bool isBaseType) {
-        isBaseType = true;
+    private static string GetSysType(string typeName, out PropertyType propertyType) {
+        propertyType = PropertyType.Base;
         string retTypeName = "";
         string typeNameLower = typeName.ToLower();
         switch (typeNameLower) {
@@ -164,9 +190,16 @@ public sealed partial class Csv {
             case "double":
                 retTypeName = typeof(double).Name;
                 break;
+            case "localizekey": //LocalizeKey
+                retTypeName = typeof(int).Name;
+                break;
+            case "pathkey": //PathKey
+                retTypeName = typeName;
+                propertyType = PropertyType.PathKey;
+                break;
             default:
                 retTypeName = typeName;
-                isBaseType = false;
+                propertyType = PropertyType.Class;
                 break;
         }
         return retTypeName;
@@ -190,14 +223,28 @@ public sealed partial class Csv {
         return m_type2Headers.TryGetValue(type, out header);
     }
 
+    private enum PropertyType {
+        Base,
+        Class,
+        PathKey,
+    }
+
     public static void MakeCsvClass(string outPaths, string fileCsv,
-        CsvHeader[] headers, string[] typeStrs) {
+        CsvHeader[] headers, string[] typeStrs, bool isSparse) {
         //string fileCsv = Path.GetFileNameWithoutExtension(file);
         string classStr = TemplateClass;
+        string templateSimpeRead = TemplateSimpeRead;
+        string templateClassRead = TemplateClassRead;
+        string templateSimpeWrite = TemplateSimpeWrite;
+        string templateClassWrite = TemplateClassWrite;
+        if (isSparse) {
+            templateSimpeRead = TemplateSparseSimpeRead;
+            templateClassRead = TemplateSparseClassRead;
+            templateSimpeWrite = TemplateSparseSimpeWrite;
+            templateClassWrite = TemplateSparseClassWrite;
 
-        string templateSimpe = TemplateSimpeCase;
-        string templateEnum = TemplateEnumCase;
-        string templateProperty = TemplateProperty;
+            classStr = classStr.Replace("#ByteRead#", TemplateSparseRead);
+        }
 
         string headerfile;
         Header typeHeader;
@@ -268,10 +315,10 @@ public sealed partial class Csv {
                 typeStr = typeStr.Substring(1);
             }
             string[] subTypes = typeStr.Split(CsvConfig.classSeparator);
-            bool isBaseType;
-            string typeName = GetSysType(subTypes[0], out isBaseType);
+            PropertyType propertyType;
+            string typeName = GetSysType(subTypes[0], out propertyType);
             subTypes = typeName.Split(CsvConfig.arrayChars);
-            string baseTypeName = GetSysType(subTypes[0], out isBaseType);
+            string baseTypeName = GetSysType(subTypes[0], out propertyType);
             bool isEnum = false;
             string funcName = string.Empty;
             if (subTypes.Length == 1) {
@@ -294,12 +341,18 @@ public sealed partial class Csv {
 
             string template;
             if (isEnum) {
-                template = templateEnum.Replace("@funName", funcName).Replace("@name", fieldName)
+                template = TemplateEnumCase.Replace("@funName", funcName).Replace("@name", fieldName)
                     .Replace("@type", baseTypeName).Replace("@paramName", paramName);
             }
             else {
-                template = templateSimpe.Replace("@funName", funcName).Replace("@name", fieldName)
-                    .Replace("@type", baseTypeName).Replace("@paramName", paramName);
+                if (propertyType != PropertyType.PathKey) {
+                    template = TemplateSimpeCase.Replace("@funName", funcName).Replace("@name", fieldName)
+                        .Replace("@type", baseTypeName).Replace("@paramName", paramName);
+                }
+                else {
+                    template = TemplateSimpeCase.Replace("@funName", funcName).Replace("@name", fieldName)
+                        .Replace("@type", "Int32").Replace("@paramName", paramName);
+                }
             }
 
             if (isSimple) {
@@ -315,26 +368,31 @@ public sealed partial class Csv {
             else {
                 string byteRead;
                 string byteWrite;
-                if (isBaseType || isEnum) {
-                    byteRead = TemplateSimpeRead.Replace("@tag", idx.ToString()).Replace("@name", fieldName);
-                    byteWrite = TemplateSimpeWrite.Replace("@tag", idx.ToString()).Replace("@name", fieldName);
+                if (propertyType != PropertyType.Class || isEnum) {
+                    byteRead = templateSimpeRead.Replace("@tag", idx.ToString()).Replace("@name", fieldName);
+                    byteWrite = templateSimpeWrite.Replace("@tag", idx.ToString()).Replace("@name", fieldName);
                 }
                 else {
-                    byteRead = TemplateClassRead.Replace("@tag", idx.ToString()).Replace("@type", baseTypeName).Replace("@name", fieldName);
+                    byteRead = templateClassRead.Replace("@tag", idx.ToString()).Replace("@type", baseTypeName).Replace("@name", fieldName);
                     if (funcName != "Base") {
                         byteRead = byteRead.Replace("@funName", funcName);
                     }
                     else {
                         byteRead = byteRead.Replace("@funName", string.Empty);
                     }
-                    byteWrite = TemplateClassWrite.Replace("@tag", idx.ToString()).Replace("@type", baseTypeName).Replace("@name", fieldName);
+                    byteWrite = templateClassWrite.Replace("@tag", idx.ToString()).Replace("@type", baseTypeName).Replace("@name", fieldName);
                 }
                 byteReadBuilder.Append(byteRead);
                 byteWriteBuilder.Append(byteWrite);
             }
 
             if (idx != 0) {
-                template = templateProperty.Replace("@type", typeName).Replace("@name", fieldName);
+                if (propertyType != PropertyType.PathKey) {
+                    template = TemplateProperty.Replace("@type", typeName).Replace("@name", fieldName);
+                }
+                else {
+                    template = TemplatePathKeyProperty.Replace("@name", fieldName);
+                }
                 propertyBuilder.Append(template);
             }
         }

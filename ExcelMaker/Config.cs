@@ -50,6 +50,13 @@ public class Setting {
     public bool exportDir = true;
 
     public Combine[] combines;
+
+    public string classPostfix = "Csv";
+
+    /// <summary>
+    /// 稀疏表名称
+    /// </summary>
+    public string[] sparses;
 }
 
 public class Header {

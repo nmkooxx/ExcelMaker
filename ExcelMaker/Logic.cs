@@ -73,6 +73,7 @@ public class Logic {
         else {
             m_setting = new Setting();
         }
+        CsvConfig.classPostfix = m_setting.classPostfix;
     }
 
     public void WriteSetting() {
@@ -148,6 +149,25 @@ public class Logic {
         }
 
         return keyExtends.TryGetValue(fileName, out extend);
+    }
+
+    /// <summary>
+    /// 是否稀疏表
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns></returns>
+    private bool IsSparse(string name) {
+        if (m_setting.sparses == null) {
+            return false;
+        }
+        for (int i = 0; i < m_setting.sparses.Length; i++) {
+            var sparse = m_setting.sparses[i];
+            if (sparse == name) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool IsEnum(string name) {
@@ -272,6 +292,7 @@ public class Logic {
         char type, ExportType exportType, ExportLanguage language, string codePath, bool exportCode) {
         s_exportLanguage = language;
         m_logBuilder.Clear();
+        m_PathKeys.Clear();
         switch (exportType) {
             case ExportType.Csv:
                 exportCsv(dirPath, sync, type, codePath, exportCode);
@@ -385,7 +406,7 @@ public class Logic {
             if (exportCode) {
                 switch (s_exportLanguage) {
                     case ExportLanguage.CSharp:
-                        CsvMaker_CSharp.MakeCsvClass(codePaths, csvName, m_headers, m_rawTypes);
+                        CsvMaker_CSharp.MakeCsvClass(codePaths, csvName, m_headers, m_rawTypes, IsSparse(csvName));
                         break;
                     case ExportLanguage.Java:
                         CsvMaker_Java.MakeCsvClass(codePaths, csvName, m_headers, m_rawTypes);
@@ -401,7 +422,7 @@ public class Logic {
                         break;
                 }
             }
-            if (m_defineIndex > 0) {
+            if (m_defineIndex >= 0) {
                 string[] codePathArrray = codePaths.Split(';');
                 foreach (string codePath in codePathArrray) {
                     if (!Directory.Exists(codePath)) {
@@ -433,6 +454,32 @@ public class Logic {
             }
         }
         Debug.Log(m_logBuilder.ToString());
+
+        if (m_LocalizeKeys.Count > 0) {
+            StringBuilder keyBuilder = new StringBuilder();
+            foreach (var item in m_LocalizeKeys) {
+                keyBuilder.Append(item.Key);
+                keyBuilder.Append(CsvConfig.delimiter);
+                keyBuilder.AppendLine(item.Value);
+            }
+            string keyPath = "LocalizeKey.txt";
+            File.WriteAllText(keyPath, keyBuilder.ToString());
+        }
+
+        if (m_PathKeys.Count > 0) {
+            StringBuilder keyBuilder = new StringBuilder();
+            keyBuilder.AppendLine("id,value");
+            foreach (var item in m_PathKeys) {
+                keyBuilder.Append(item.Key);
+                keyBuilder.Append(CsvConfig.delimiter);
+                keyBuilder.AppendLine(item.Value);
+            }
+            string text = keyBuilder.ToString();
+            path = dirPath + "/PathKey.csv";
+            localCsvPath = localPath + "/PathKey.csv";
+            File.WriteAllText(path, text);
+            File.WriteAllText(localCsvPath, text);
+        }
     }
 
     private void exportJson(string dirPath, bool sync, char type) {
@@ -639,6 +686,11 @@ public class Logic {
         m_defineIndex = -1;
         m_exportIndex = -1;
 
+        if (m_fileName == "Localize") {
+            m_defineIndex = 0;
+            m_defineName = "i18n";
+        }
+
         m_rawTypes = new string[cellCount];
         m_cellTypes = new string[cellCount];
         //第一列为id，只支持int，string
@@ -837,6 +889,9 @@ public class Logic {
     private Dictionary<string, string> m_Localizes = new Dictionary<string, string>();
     private const string kLocalizeRefTag = "[id=";
 
+    private Dictionary<int, string> m_LocalizeKeys = new Dictionary<int, string>();
+    private Dictionary<int, string> m_PathKeys = new Dictionary<int, string>();
+
     /// <summary>
     /// 将含有特殊符号的字符串包裹起来
     /// 不支持Json格式的String[]
@@ -918,6 +973,10 @@ public class Logic {
     private void initCsv() {
         m_csvBuilder = new StringBuilder();
         m_csvBuilder.Append(m_headers[0].name);
+        if (m_fileName == "Localize") {
+            m_csvBuilder.Append(CsvConfig.delimiter);
+            m_csvBuilder.Append("key");
+        }
         for (int i = 1; i < m_headers.Length; i++) {
             var header = m_headers[i];
             if (header.skip) {
@@ -1064,6 +1123,8 @@ public class Logic {
     }
 
     private bool CheckSimpleFormat(string cellType, object value, CsvHeader header, int slot) {
+        string key, existKey;
+        int hashcode;
         switch (cellType.ToLower()) {
             case "bool":
                 if (value is string) {
@@ -1121,6 +1182,56 @@ public class Logic {
                 break;
             case "string":
                 m_csvBuilder.Append(packString(value.ToString(), false, slot));
+                break;
+            case "localizekey": //LocalizeKey
+                key = packString(value.ToString(), false, slot);
+                hashcode = key.GetHashCode();
+                m_csvBuilder.Append(hashcode);
+
+                if (m_LocalizeKeys.TryGetValue(hashcode, out existKey)) {
+                    //找不到就报错，跳出替换
+                    if (existKey != key) {
+                        LogError($"多语言hash冲突, hashcode：{hashcode} key:{key} existKey:{existKey}");
+                    }
+                }
+                else {
+                    m_LocalizeKeys[hashcode] = key;
+                }
+
+                if (slot == 0 && m_fileName == "Localize") {
+                    m_csvBuilder.Append(CsvConfig.delimiter);
+                    m_csvBuilder.Append(key);
+
+                    //还是手动生成比较合理，很多不需要导出define
+                    //switch (s_exportLanguage) {
+                    //    case ExportLanguage.CSharp:
+                    //        CsvMaker_CSharp.AddCsvDefine("int", key, hashcode);
+                    //        break;
+                    //    case ExportLanguage.Java:
+                    //        CsvMaker_Java.AddCsvDefine("Int32", key, hashcode);
+                    //        break;
+                    //    case ExportLanguage.TypeScript:
+                    //        CsvMaker_TypeScript.AddCsvDefine("Int32", key, hashcode);
+                    //        break;
+                    //    default:
+                    //        break;
+                    //}
+                }
+                break;
+            case "pathkey": //PathKey
+                key = packString(value.ToString(), false, slot);
+                hashcode = key.GetHashCode();
+                m_csvBuilder.Append(hashcode);
+
+                if (m_PathKeys.TryGetValue(hashcode, out existKey)) {
+                    //找不到就报错，跳出替换
+                    if (existKey != key) {
+                        LogError($"PathKey hash冲突, hashcode：{hashcode} key:{key} existKey:{existKey}");
+                    }
+                }
+                else {
+                    m_PathKeys[hashcode] = key;
+                }
                 break;
             default:
                 return false;
