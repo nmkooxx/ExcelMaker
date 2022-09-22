@@ -86,14 +86,10 @@ public sealed partial class Csv {
     }";
 
     static string TemplatePathKeyProperty = @"
-    private Int32 c_@name;
-    public String @name {
+    private @typeInt c_@name;
+    public @typeString @name {
         get {
-            string path = Cfg.PathKey.Convert(c_@name);
-            if (string.IsNullOrEmpty(path)) {
-                Debug.LogError($""{GetType()} id:{c_id} can't find PathKey:{c_@name}"");
-            }
-            return path;
+            return Cfg.PathKey.Convert(c_@name, c_id);
         }
     }";
 
@@ -191,7 +187,9 @@ public sealed partial class Csv {
                 retTypeName = typeof(double).Name;
                 break;
             case "localizekey": //LocalizeKey
-                retTypeName = typeof(int).Name;
+                //retTypeName = typeof(int).Name;
+                retTypeName = typeName;
+                propertyType = PropertyType.LocalizeKey;
                 break;
             case "pathkey": //PathKey
                 retTypeName = typeName;
@@ -227,6 +225,7 @@ public sealed partial class Csv {
         Base,
         Class,
         PathKey,
+        LocalizeKey,
     }
 
     public static void MakeCsvClass(string outPaths, string fileCsv,
@@ -345,13 +344,13 @@ public sealed partial class Csv {
                     .Replace("@type", baseTypeName).Replace("@paramName", paramName);
             }
             else {
-                if (propertyType != PropertyType.PathKey) {
+                if (propertyType == PropertyType.PathKey || propertyType == PropertyType.LocalizeKey) {
                     template = TemplateSimpeCase.Replace("@funName", funcName).Replace("@name", fieldName)
-                        .Replace("@type", baseTypeName).Replace("@paramName", paramName);
+                        .Replace("@type", "Key").Replace("@paramName", paramName);
                 }
                 else {
                     template = TemplateSimpeCase.Replace("@funName", funcName).Replace("@name", fieldName)
-                        .Replace("@type", "Int32").Replace("@paramName", paramName);
+                        .Replace("@type", baseTypeName).Replace("@paramName", paramName);
                 }
             }
 
@@ -387,11 +386,17 @@ public sealed partial class Csv {
             }
 
             if (idx != 0) {
-                if (propertyType != PropertyType.PathKey) {
-                    template = TemplateProperty.Replace("@type", typeName).Replace("@name", fieldName);
+                if (propertyType == PropertyType.PathKey) {
+                    var typeInt = typeName.Replace("PathKey", "Int32");
+                    var typeString = typeName.Replace("PathKey", "String");
+                    template = TemplatePathKeyProperty.Replace("@typeInt", typeInt).Replace("@typeString", typeString)
+                                    .Replace("@name", fieldName);
+                }
+                else if (propertyType == PropertyType.LocalizeKey) {
+                    template = TemplateProperty.Replace("@type", typeName.Replace("LocalizeKey", "Int32")).Replace("@name", fieldName);
                 }
                 else {
-                    template = TemplatePathKeyProperty.Replace("@name", fieldName);
+                    template = TemplateProperty.Replace("@type", typeName).Replace("@name", fieldName);
                 }
                 propertyBuilder.Append(template);
             }

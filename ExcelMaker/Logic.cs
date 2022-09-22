@@ -455,31 +455,31 @@ public class Logic {
         }
         Debug.Log(m_logBuilder.ToString());
 
-        if (m_LocalizeKeys.Count > 0) {
-            StringBuilder keyBuilder = new StringBuilder();
-            foreach (var item in m_LocalizeKeys) {
-                keyBuilder.Append(item.Key);
-                keyBuilder.Append(CsvConfig.delimiter);
-                keyBuilder.AppendLine(item.Value);
-            }
-            string keyPath = "LocalizeKey.txt";
-            File.WriteAllText(keyPath, keyBuilder.ToString());
-        }
+//         if (m_LocalizeKeys.Count > 0) {
+//             StringBuilder keyBuilder = new StringBuilder();
+//             foreach (var item in m_LocalizeKeys) {
+//                 keyBuilder.Append(item.Key);
+//                 keyBuilder.Append(CsvConfig.delimiter);
+//                 keyBuilder.AppendLine(item.Value);
+//             }
+//             string keyPath = "LocalizeKey.txt";
+//             File.WriteAllText(keyPath, keyBuilder.ToString());
+//         }
 
-        if (m_PathKeys.Count > 0) {
-            StringBuilder keyBuilder = new StringBuilder();
-            keyBuilder.AppendLine("id,value");
-            foreach (var item in m_PathKeys) {
-                keyBuilder.Append(item.Key);
-                keyBuilder.Append(CsvConfig.delimiter);
-                keyBuilder.AppendLine(item.Value);
-            }
-            string text = keyBuilder.ToString();
-            path = dirPath + "/PathKey.csv";
-            localCsvPath = localPath + "/PathKey.csv";
-            File.WriteAllText(path, text);
-            File.WriteAllText(localCsvPath, text);
-        }
+//         if (m_PathKeys.Count > 0) {
+//             StringBuilder keyBuilder = new StringBuilder();
+//             keyBuilder.AppendLine("id,value");
+//             foreach (var item in m_PathKeys) {
+//                 keyBuilder.Append(item.Key);
+//                 keyBuilder.Append(CsvConfig.delimiter);
+//                 keyBuilder.AppendLine(item.Value);
+//             }
+//             string text = keyBuilder.ToString();
+//             path = dirPath + "/PathKey.csv";
+//             localCsvPath = localPath + "/PathKey.csv";
+//             File.WriteAllText(path, text);
+//             File.WriteAllText(localCsvPath, text);
+//         }
     }
 
     private void exportJson(string dirPath, bool sync, char type) {
@@ -973,10 +973,6 @@ public class Logic {
     private void initCsv() {
         m_csvBuilder = new StringBuilder();
         m_csvBuilder.Append(m_headers[0].name);
-        if (m_fileName == "Localize") {
-            m_csvBuilder.Append(CsvConfig.delimiter);
-            m_csvBuilder.Append("key");
-        }
         for (int i = 1; i < m_headers.Length; i++) {
             var header = m_headers[i];
             if (header.skip) {
@@ -1186,7 +1182,8 @@ public class Logic {
             case "localizekey": //LocalizeKey
                 key = packString(value.ToString(), false, slot);
                 hashcode = key.GetHashCode();
-                m_csvBuilder.Append(hashcode);
+                //m_csvBuilder.Append(hashcode);
+                m_csvBuilder.Append(key);
 
                 if (m_LocalizeKeys.TryGetValue(hashcode, out existKey)) {
                     //找不到就报错，跳出替换
@@ -1197,31 +1194,12 @@ public class Logic {
                 else {
                     m_LocalizeKeys[hashcode] = key;
                 }
-
-                if (slot == 0 && m_fileName == "Localize") {
-                    m_csvBuilder.Append(CsvConfig.delimiter);
-                    m_csvBuilder.Append(key);
-
-                    //还是手动生成比较合理，很多不需要导出define
-                    //switch (s_exportLanguage) {
-                    //    case ExportLanguage.CSharp:
-                    //        CsvMaker_CSharp.AddCsvDefine("int", key, hashcode);
-                    //        break;
-                    //    case ExportLanguage.Java:
-                    //        CsvMaker_Java.AddCsvDefine("Int32", key, hashcode);
-                    //        break;
-                    //    case ExportLanguage.TypeScript:
-                    //        CsvMaker_TypeScript.AddCsvDefine("Int32", key, hashcode);
-                    //        break;
-                    //    default:
-                    //        break;
-                    //}
-                }
                 break;
             case "pathkey": //PathKey
                 key = packString(value.ToString(), false, slot);
                 hashcode = key.GetHashCode();
-                m_csvBuilder.Append(hashcode);
+                //m_csvBuilder.Append(hashcode);
+                m_csvBuilder.Append(key);
 
                 if (m_PathKeys.TryGetValue(hashcode, out existKey)) {
                     //找不到就报错，跳出替换
