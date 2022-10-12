@@ -174,6 +174,8 @@ namespace CsvHelper {
                     jTokenType = JTokenType.Float;
                     break;
                 case "string":
+                case "pathkey":
+                case "localizekey":
                     jTokenType = JTokenType.String;
                     break;
                 case "vector2":
