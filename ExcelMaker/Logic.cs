@@ -1123,9 +1123,14 @@ public class Logic {
         int hashcode;
         switch (cellType.ToLower()) {
             case "bool":
-                if (value is string) {
+                if (value is string strb) {
                     //Debug.LogError(m_filePath + " 数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                    LogError("bool格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    if (!string.IsNullOrWhiteSpace(strb)) {
+                        LogError("bool格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    }
+                    else {
+                        value = string.Empty;
+                    }
                 }
                 else {
                     var info = value.ToString();
@@ -1138,9 +1143,14 @@ public class Logic {
                 break;
             case "uint":
             case "ulong":
-                if (value is string) {
+                if (value is string stru) {
                     //Debug.LogError(m_filePath + " 数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                    LogError("正整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    if (!string.IsNullOrWhiteSpace(stru)) {
+                        LogError("正整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    }
+                    else {
+                        value = string.Empty;
+                    }
                 }
                 else {
                     var info = value.ToString();
@@ -1158,9 +1168,14 @@ public class Logic {
             case "long":
             case "fixed":
                 //Debug.Log("value:" + value + " type:" + value.GetType());
-                if (value is string) {
+                if (value is string stri) {
                     //Debug.LogError(m_filePath + " 数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                    LogError("整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    if (!string.IsNullOrWhiteSpace(stri)) {
+                        LogError("整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    }
+                    else {
+                        value = string.Empty;
+                    }
                 }
                 else if (value.ToString().IndexOf('.') >= 0) {
                     //Debug.LogError(m_filePath + " 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
@@ -1170,9 +1185,14 @@ public class Logic {
                 break;
             case "float":
             case "double":
-                if (value is string) {
+                if (value is string strf) {
                     //Debug.LogError(m_filePath + " 小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                    LogError("小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    if (!string.IsNullOrWhiteSpace(strf)) {
+                        LogError("小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    }
+                    else {
+                        value = string.Empty;
+                    }
                 }
                 m_csvBuilder.Append(value);
                 break;
