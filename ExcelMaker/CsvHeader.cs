@@ -118,6 +118,11 @@ namespace CsvHelper {
             "vector4",
             "vector2int",
             "vector3int",
+            "vector4int",
+            "vector2fixed",
+            "vector3fixed",
+            "vector4fixed",
+            "couple"
         };
 
         public int arrayRank { get; private set; } = -1;
@@ -139,6 +144,17 @@ namespace CsvHelper {
                         break;
                     case "vector2int":
                     case "vector3int":
+                    case "vector4int":
+                        ++arrayRank;
+                        jTokenType = JTokenType.Integer;
+                        break;
+                    case "vector2fixed":
+                    case "vector3fixed":
+                    case "vector4fixed":
+                        ++arrayRank;
+                        jTokenType = JTokenType.Integer;
+                        break;
+                    case "couple":
                         ++arrayRank;
                         jTokenType = JTokenType.Integer;
                         break;
@@ -186,6 +202,17 @@ namespace CsvHelper {
                     break;
                 case "vector2int":
                 case "vector3int":
+                case "vector4int":
+                    ++arrayRank;
+                    jTokenType = JTokenType.Integer;
+                    break;
+                case "vector2fixed":
+                case "vector3fixed":
+                case "vector4fixed":
+                    ++arrayRank;
+                    jTokenType = JTokenType.Integer;
+                    break;
+                case "couple":
                     ++arrayRank;
                     jTokenType = JTokenType.Integer;
                     break;

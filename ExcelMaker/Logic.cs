@@ -253,6 +253,7 @@ public class Logic {
         }
 
         m_excelInfos.Clear();
+        m_excelMap.Clear();
         excelList.Items.Clear();
         int offset = m_config.rootPath.Length + 1;
         //var paths = Directory.GetFiles(m_config.rootPath, "*.*", SearchOption.AllDirectories).Where(s => s.EndsWith(".xlsx") || s.EndsWith(".csv"));
@@ -1042,20 +1043,21 @@ public class Logic {
                 continue;
             }
 
-            bool isSpreadArray = false;
             if (header.subs != null) {
-                int subLen = header.subs.Length;
-                if (header.subs[subLen - 2].type == eFieldType.Array && header.subs[subLen - 1].type == eFieldType.Primitive) {
-                    isSpreadArray = true;
-                }
-            }
-            if (isSpreadArray) {
-                if (cellType.Length > 2) {
-                    cellType = cellType.Substring(0, cellType.Length - 2);
-                }
-                else {
-                    if (m_curIndex < 10) {
-                        LogError("表头过小, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                int subIndex = header.subs.Length - 1;
+                if (header.subs[subIndex].type == eFieldType.Primitive) {
+                    --subIndex;
+                    while (subIndex >= 0 && header.subs[subIndex].type == eFieldType.Array) {
+                        if (cellType.Length > 2) {
+                            cellType = cellType.Substring(0, cellType.Length - 2);
+                        }
+                        else {
+                            if (m_curIndex < 10) {
+                                LogError($"{m_fileName} 表头过小, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                                break;
+                            }
+                        }
+                        --subIndex;
                     }
                 }
             }
@@ -1068,7 +1070,7 @@ public class Logic {
                 info = value.ToString();
                 if (info.Length <= 0) {
                     //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                    LogError("扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    LogError($"{m_fileName} 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     break;
                 }
                 if (cell.CellType == CellType.String) {
@@ -1078,7 +1080,7 @@ public class Logic {
                 else {
                     if (!IsEnum(cellType) && header.subs == null) {
                         //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                        LogError("扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError($"{m_fileName} 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                     m_csvBuilder.Append(packString(info, false, rank));
                 }
@@ -1124,9 +1126,8 @@ public class Logic {
         switch (cellType.ToLower()) {
             case "bool":
                 if (value is string strb) {
-                    //Debug.LogError(m_filePath + " 数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     if (!string.IsNullOrWhiteSpace(strb)) {
-                        LogError("bool格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError($"{m_fileName} bool格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                     else {
                         value = string.Empty;
@@ -1135,8 +1136,7 @@ public class Logic {
                 else {
                     var info = value.ToString();
                     if (info != "1" && info != "0") {
-                        //Debug.LogError(m_filePath + " 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                        LogError("bool格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError($"{m_fileName} bool格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                 }
                 m_csvBuilder.Append(value);
@@ -1144,9 +1144,8 @@ public class Logic {
             case "uint":
             case "ulong":
                 if (value is string stru) {
-                    //Debug.LogError(m_filePath + " 数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     if (!string.IsNullOrWhiteSpace(stru)) {
-                        LogError("正整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError($"{m_fileName} 正整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                     else {
                         value = string.Empty;
@@ -1155,11 +1154,10 @@ public class Logic {
                 else {
                     var info = value.ToString();
                     if (info.IndexOf('.') >= 0) {
-                        //Debug.LogError(m_filePath + " 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                        LogError("正整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError($"{m_fileName} 正整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                     else if (info[0] == '-') {
-                        LogError("正整数填写了负数, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError($"{m_fileName} 正整数填写了负数, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                 }
                 m_csvBuilder.Append(value);
@@ -1169,26 +1167,23 @@ public class Logic {
             case "fixed":
                 //Debug.Log("value:" + value + " type:" + value.GetType());
                 if (value is string stri) {
-                    //Debug.LogError(m_filePath + " 数字格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     if (!string.IsNullOrWhiteSpace(stri)) {
-                        LogError("整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError($"{m_fileName} 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                     else {
                         value = string.Empty;
                     }
                 }
                 else if (value.ToString().IndexOf('.') >= 0) {
-                    //Debug.LogError(m_filePath + " 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                    LogError("整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    LogError($"{m_fileName} 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                 }
                 m_csvBuilder.Append(value);
                 break;
             case "float":
             case "double":
                 if (value is string strf) {
-                    //Debug.LogError(m_filePath + " 小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     if (!string.IsNullOrWhiteSpace(strf)) {
-                        LogError("小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError($"{m_fileName} 小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                     else {
                         value = string.Empty;
@@ -1208,7 +1203,7 @@ public class Logic {
                 if (m_LocalizeKeys.TryGetValue(hashcode, out existKey)) {
                     //找不到就报错，跳出替换
                     if (existKey != key) {
-                        LogError($"多语言hash冲突, hashcode：{hashcode} key:{key} existKey:{existKey}");
+                        LogError($"{m_fileName} 多语言hash冲突, hashcode：{hashcode} key:{key} existKey:{existKey}");
                     }
                 }
                 else {
@@ -1224,7 +1219,7 @@ public class Logic {
                 if (m_PathKeys.TryGetValue(hashcode, out existKey)) {
                     //找不到就报错，跳出替换
                     if (existKey != key) {
-                        LogError($"PathKey hash冲突, hashcode：{hashcode} key:{key} existKey:{existKey}");
+                        LogError($"{m_fileName} PathKey hash冲突, hashcode：{hashcode} key:{key} existKey:{existKey}");
                     }
                 }
                 else {
@@ -1273,24 +1268,23 @@ public class Logic {
         try {
             var array = JsonConvert.DeserializeObject(info) as JArray;
             if (array == null) {
-                LogError("Json数组格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
+                LogError($"{m_fileName} Json数组格式错误, index：{m_curIndex} header:{header.name} info:{info}");
                 return;
             }
             var token = array.First;
-            for (int rank = header.arrayRank - 2; rank >= 0; rank--) {
+            for (int rank = header.arrayRank - 1; rank > 0; rank--) {
                 if (!token.HasValues) {
-                    LogError("Json数组维度错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
+                    LogError($"{m_fileName} Json数组维度错误, index：{m_curIndex} header:{header.name} info:{info}");
                     return;
                 }
                 token = token.First;
             }
             if (!header.CheckJToken(token)) {
-                LogError("Json数组内数据类型错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
+                LogError($"{m_fileName} Json数组内数据类型错误, index：{m_curIndex} header:{header.name} info:{info}" );
             }
         }
         catch (Exception e) {
-            //Debug.LogError(m_filePath + " Json数组格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-            LogError("Json数组解析错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
+            LogError($"{m_fileName} Json数组解析错误, index：{m_curIndex} header:{header.name} info:{info}\n{e}");
         }
 
     }
@@ -1302,7 +1296,7 @@ public class Logic {
         }
         catch (Exception e) {
             //Debug.LogError(m_filePath + " Json格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-            LogError("Json对象解析错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
+            LogError("Json对象解析错误, index：" + m_curIndex + " header:" + header.name + " info:" + info + "\n" + e);
         }
     }
 
@@ -1351,6 +1345,7 @@ public class Logic {
                     token = JToken.FromObject(Convert.ToUInt64(value));
                     break;
                 case "long":
+                case "fixed":
                     token = JToken.FromObject(Convert.ToInt64(value));
                     break;
                 case "float":
