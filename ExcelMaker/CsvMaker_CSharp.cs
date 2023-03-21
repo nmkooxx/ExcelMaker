@@ -125,6 +125,29 @@ public sealed partial class Csv {
         }
     }";
 
+    static string TemplatePathKeysProperty = @"
+    #if UNITY_EDITOR
+    private @typeString c_@name;
+    public @typeString @nameRaw {
+        get {
+            return c_@name;
+        }
+    }
+    #endif
+    private @typeInt i_@name;
+    private @typeString t_@name;
+    public @typeString @name {
+        get {
+            if (null == i_@name) {
+                return null;
+            }
+            if (null == t_@name) {
+                t_@name = Cfg.PathKey.Convert(i_@name, c_id);
+            }
+            return t_@name;
+        }
+    }";
+
     public static string TemplateDefineClass = @"public sealed partial class @className {
 #property#
 }
@@ -438,8 +461,14 @@ public sealed partial class Csv {
                 else if (propertyType == PropertyType.PathKey) {
                     var typeInt = typeName.Replace("PathKey", "Int32");
                     var typeString = typeName.Replace("PathKey", "String");
-                    template = TemplatePathKeyProperty.Replace("@typeInt", typeInt).Replace("@typeString", typeString)
-                                    .Replace("@name", fieldName);
+                    if (funcName != "Base") {
+                        template = TemplatePathKeysProperty.Replace("@typeInt", typeInt).Replace("@typeString", typeString)
+                                            .Replace("@name", fieldName);
+                    }
+                    else {
+                        template = TemplatePathKeyProperty.Replace("@typeInt", typeInt).Replace("@typeString", typeString)
+                                        .Replace("@name", fieldName);
+                    }
                 }
                 else {
                     template = TemplateProperty.Replace("@type", typeName).Replace("@name", fieldName);
