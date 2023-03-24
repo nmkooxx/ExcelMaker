@@ -227,7 +227,13 @@ namespace CsvHelper {
                 return true;
             }
             if (jTokenType == JTokenType.Float) {
+                //支持需要浮点类型的地方填整数
                 if (token.Type == JTokenType.Integer) {
+                    return true;
+                }
+            }
+            else if (jTokenType == JTokenType.Object) {
+                if (arrayRank > 0 && token.Type == JTokenType.Array) {
                     return true;
                 }
             }
