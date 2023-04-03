@@ -75,6 +75,7 @@
     <Compile Include="CsvMaker_TypeScript.cs" />
     <Compile Include="CsvMaker_CSharp.cs" />
     <Compile Include="CsvNode.cs" />
+    <Compile Include="DefineMaker_CSharp.cs" />
     <Compile Include="ExcelReader.cs" />
     <Compile Include="Debug.cs" />
     <Compile Include="MainForm.cs">

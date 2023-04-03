@@ -164,7 +164,7 @@ export class @classNameCsvReader extends CsvHelper.CsvReader<@classNameCsv> {
     }
 
     public static void MakeCsvClass(string outPaths, string fileCsv,
-        CsvHeader[] headers, string[] typeStrs,
+        List<CsvHeader> headers, List<string> typeStrs,
         string headExtend, string csvExtend, string readerExtend) {
         //string fileCsv = Path.GetFileNameWithoutExtension(file);
         string classStr = TemplateCsv;
@@ -188,7 +188,7 @@ export class @classNameCsvReader extends CsvHelper.CsvReader<@classNameCsv> {
         List<string> flagKeys = new List<string>();
         List<string> importKeys = new List<string>();
 
-        for (int i = 0; i < headers.Length; i++) {
+        for (int i = 0; i < headers.Count; i++) {
             CsvHeader header = headers[i];
             if (header.skip) {
                 continue;

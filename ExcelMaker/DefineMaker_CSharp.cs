@@ -6,60 +6,40 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
-public class CsvMaker_CSharp {
+public class DefineMaker_CSharp {
     static string TemplateClass = @"using System;
 using UnityEngine;
 #headerfile#
-public sealed partial class @className : @classPostfixTemplate<@classKey>, IByteReadable
+public sealed partial class @className : AbsDefine
 #if UNITY_EDITOR
     , IByteWriteable
 #endif
-{
-    private @classKey c_id;
-    public @classKey id {
-        get { return c_id; }
-        set { c_id = value; }
-    }#property#
+{   #property#
 
-    public void SetField(string field, string text) {
+    public @className(string name) : base(name) { }
+
+    protected override void SetField(string field, string text) {
         switch (field) {#BaseCase#
             default:
                 break;
         }
     }
 
-    public void SetFieldByNode(string field, CsvNode node) {
-        switch (field) {#NodeCase#
-            default:
-                break;
-        }
-    }
-
-    public void Deserialize(ByteReader reader) {#ByteRead#
+    public override void Deserialize(ByteReader reader) {#ByteRead#
     }
 
 #if UNITY_EDITOR
-    public void Serialize(CsvHelper.ByteWriter writer) {#ByteWrite#
+    public void Serialize(ByteWriter writer) {#ByteWrite#
     }
 #endif
 }
 
-public sealed partial class @classNameReader : @classPostfixReader<@classKey, @className> {
-    protected override void InitKeys() {
-        for (int i = 0; i < m_Keys.Length; i++) {
-            m_ByteReader.Read(ref m_Keys[i]);
-            m_id2Indexs[m_Keys[i]] = i;
-        }
-    }
-}
-
-public sealed partial class @classPostfix {
-    private static @classNameReader m_@class = null;
-    public static @classNameReader @class {
+public sealed partial class Define {
+    private static @className m_@class = null;
+    public static @className @class {
         get {
             if (null == m_@class) {
-                m_@class = new @classNameReader();
-                m_@class.csvName = ""@fileName"";
+                m_@class = new @className(""@fileName"");
             }
             return m_@class;
         }
@@ -91,22 +71,6 @@ public sealed partial class @classPostfix {
         #if UNITY_EDITOR
         set { c_@name = value; }
         #endif
-    }";
-
-    static string TemplateLocalizeKeyProperty = @"
-    #if UNITY_EDITOR
-    private @typeString c_@name;
-    public @typeString @nameRaw {
-        get {
-            return c_@name;
-        }
-    }
-    #endif
-    private @typeInt i_@name;
-    public @typeInt @name {
-        get {
-            return i_@name;
-        }
     }";
 
     static string TemplatePathKeyProperty = @"
@@ -148,14 +112,6 @@ public sealed partial class @classPostfix {
         }
     }";
 
-    public static string TemplateDefineClass = @"public sealed partial class @className {
-#property#
-}
-";
-
-    public static string TemplateDefineField = @"
-    public const @type @name = @value;";
-
     static string TemplateSimpeRead = @"
         reader.Read(ref c_@name);";
 
@@ -167,32 +123,6 @@ public sealed partial class @classPostfix {
 
     static string TemplateClassWrite = @"
         @typeConverter.Inst.Write(writer, c_@name);";
-
-    static string TemplateSparseRead = @"
-        byte t_tag = 0;
-        while (reader.TryReadTag(ref t_tag)) {
-            switch (t_tag) {#ByteRead#
-                default:
-                    Debug.LogError($""@className.Deserialize error id:{c_id} tag:{t_tag}"");
-                    break;
-            }
-        }";
-
-    static string TemplateSparseSimpeRead = @"
-                case @tag:
-                    reader.Read(ref c_@name);
-                    break;";
-
-    static string TemplateSparseClassRead = @"
-                case @tag:
-                    c_@name = @typeConverter.Inst.Read@funName(reader);
-                    break;";
-
-    static string TemplateSparseSimpeWrite = @"
-        writer.Write(c_@name, @tag);";
-
-    static string TemplateSparseClassWrite = @"
-        @typeConverter.Inst.Write(writer, c_@name, @tag);";
 
     static string mSuffixName = ".cs";
 
@@ -282,22 +212,14 @@ public sealed partial class @classPostfix {
         LocalizeKey,
     }
 
-    public static void MakeCsvClass(string outPaths, string fileCsv,
-        List<CsvHeader> headers, List<string> typeStrs, bool isSparse) {
+    public static void MakeClass(string outPaths, string fileCsv,
+        List<CsvHeader> headers, List<string> typeStrs) {
         //string fileCsv = Path.GetFileNameWithoutExtension(file);
         string classStr = TemplateClass;
         string templateSimpeRead = TemplateSimpeRead;
         string templateClassRead = TemplateClassRead;
         string templateSimpeWrite = TemplateSimpeWrite;
         string templateClassWrite = TemplateClassWrite;
-        if (isSparse) {
-            templateSimpeRead = TemplateSparseSimpeRead;
-            templateClassRead = TemplateSparseClassRead;
-            templateSimpeWrite = TemplateSparseSimpeWrite;
-            templateClassWrite = TemplateSparseClassWrite;
-
-            classStr = classStr.Replace("#ByteRead#", TemplateSparseRead);
-        }
 
         string headerfile;
         Header typeHeader;
@@ -314,7 +236,6 @@ public sealed partial class @classPostfix {
         StringBuilder byteReadBuilder = new StringBuilder();
         StringBuilder byteWriteBuilder = new StringBuilder();
 
-        string classKey = "";
         List<string> flagKeys = new List<string>();
         List<string> importKeys = new List<string>();
 
@@ -358,10 +279,6 @@ public sealed partial class @classPostfix {
 
             string typeStr = typeStrs[idx];
             if (string.IsNullOrEmpty(typeStr)) {
-                continue;
-            }
-            if (typeStr == "define") {
-                //define文件生成标志
                 continue;
             }
             if (typeStr[0] == CsvConfig.comment) {
@@ -421,68 +338,58 @@ public sealed partial class @classPostfix {
                 nodeBuilder.Append(template);
             }
 
-            if (header.name == CsvConfig.primaryKey) {
-                classKey = typeName;
+            string byteRead;
+            string byteWrite;
+            if (propertyType == PropertyType.LocalizeKey || propertyType == PropertyType.PathKey) {
+                byteRead = templateSimpeRead.Replace("@tag", idx.ToString())
+                            .Replace("c_@name", "i_" + fieldName).Replace("@name", fieldName);
+                byteWrite = templateSimpeWrite.Replace("@tag", idx.ToString())
+                            .Replace("c_@name", "i_" + fieldName).Replace("@name", fieldName);
+            }
+            else if(propertyType != PropertyType.Class || isEnum) {
+                byteRead = templateSimpeRead.Replace("@tag", idx.ToString()).Replace("@name", fieldName);
+                byteWrite = templateSimpeWrite.Replace("@tag", idx.ToString()).Replace("@name", fieldName);
             }
             else {
-                string byteRead;
-                string byteWrite;
-                if (propertyType == PropertyType.LocalizeKey || propertyType == PropertyType.PathKey) {
-                    byteRead = templateSimpeRead.Replace("@tag", idx.ToString())
-                                .Replace("c_@name", "i_" + fieldName).Replace("@name", fieldName);
-                    byteWrite = templateSimpeWrite.Replace("@tag", idx.ToString())
-                                .Replace("c_@name", "i_" + fieldName).Replace("@name", fieldName);
-                }
-                else if(propertyType != PropertyType.Class || isEnum) {
-                    byteRead = templateSimpeRead.Replace("@tag", idx.ToString()).Replace("@name", fieldName);
-                    byteWrite = templateSimpeWrite.Replace("@tag", idx.ToString()).Replace("@name", fieldName);
+                byteRead = templateClassRead.Replace("@tag", idx.ToString()).Replace("@type", baseTypeName).Replace("@name", fieldName);
+                if (funcName != "Base") {
+                    byteRead = byteRead.Replace("@funName", funcName);
                 }
                 else {
-                    byteRead = templateClassRead.Replace("@tag", idx.ToString()).Replace("@type", baseTypeName).Replace("@name", fieldName);
-                    if (funcName != "Base") {
-                        byteRead = byteRead.Replace("@funName", funcName);
-                    }
-                    else {
-                        byteRead = byteRead.Replace("@funName", string.Empty);
-                    }
-                    byteWrite = templateClassWrite.Replace("@tag", idx.ToString()).Replace("@type", baseTypeName).Replace("@name", fieldName);
+                    byteRead = byteRead.Replace("@funName", string.Empty);
                 }
-                byteReadBuilder.Append(byteRead);
-                byteWriteBuilder.Append(byteWrite);
+                byteWrite = templateClassWrite.Replace("@tag", idx.ToString()).Replace("@type", baseTypeName).Replace("@name", fieldName);
             }
+            byteReadBuilder.Append(byteRead);
+            byteWriteBuilder.Append(byteWrite);
+            
 
-            if (idx != 0) {
-                if (propertyType == PropertyType.LocalizeKey) {
-                    var typeInt = typeName.Replace("LocalizeKey", "Int32");
-                    var typeString = typeName.Replace("LocalizeKey", "String");
-                    template = TemplateLocalizeKeyProperty.Replace("@typeInt", typeInt).Replace("@typeString", typeString)
+            if (propertyType == PropertyType.PathKey) {
+                var typeInt = typeName.Replace("PathKey", "Int32");
+                var typeString = typeName.Replace("PathKey", "String");
+                if (funcName != "Base") {
+                    template = TemplatePathKeysProperty.Replace("@typeInt", typeInt).Replace("@typeString", typeString)
+                                        .Replace("@name", fieldName);
+                }
+                else {
+                    template = TemplatePathKeyProperty.Replace("@typeInt", typeInt).Replace("@typeString", typeString)
                                     .Replace("@name", fieldName);
                 }
-                else if (propertyType == PropertyType.PathKey) {
-                    var typeInt = typeName.Replace("PathKey", "Int32");
-                    var typeString = typeName.Replace("PathKey", "String");
-                    if (funcName != "Base") {
-                        template = TemplatePathKeysProperty.Replace("@typeInt", typeInt).Replace("@typeString", typeString)
-                                            .Replace("@name", fieldName);
-                    }
-                    else {
-                        template = TemplatePathKeyProperty.Replace("@typeInt", typeInt).Replace("@typeString", typeString)
-                                        .Replace("@name", fieldName);
-                    }
-                }
-                else {
-                    template = TemplateProperty.Replace("@type", typeName).Replace("@name", fieldName);
-                }
-                propertyBuilder.Append(template);
             }
+            else {
+                template = TemplateProperty.Replace("@type", typeName).Replace("@name", fieldName);
+            }
+            propertyBuilder.Append(template);
+            
         }
 
         string fileCsvUpper = fileCsv.Substring(0, 1).ToUpper() + fileCsv.Substring(1);
-        string className = fileCsvUpper + CsvConfig.classPostfix;
+        string className = fileCsvUpper;
+        if (!fileCsvUpper.EndsWith("Define")) {
+            className += "Define";
+        }
         classStr = classStr.Replace("@className", className);
-        classStr = classStr.Replace("@classKey", classKey);
-        classStr = classStr.Replace("@classPostfix", CsvConfig.classPostfix);
-        classStr = classStr.Replace("@class", fileCsvUpper);        
+        classStr = classStr.Replace("@class", fileCsvUpper);
         classStr = classStr.Replace("@fileName", fileCsv);
         classStr = classStr.Replace("#headerfile#", headerfile);
         classStr = classStr.Replace("#property#", propertyBuilder.ToString());
@@ -505,33 +412,5 @@ public sealed partial class @classPostfix {
             File.WriteAllText(filePath, classStr);
             Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
         }
-    }
-
-    private static StringBuilder m_defineBuilder;
-    public static void InitCsvDefine() {
-        m_defineBuilder = new StringBuilder();
-    }
-
-    public static void AddCsvDefine(string valueType, object value, object cellValue) {
-        string template = TemplateDefineField.Replace("@type", valueType)
-                        .Replace("@name", value.ToString());
-        if (valueType == "string") {
-            template = template.Replace("@value", '"' + cellValue.ToString() + '"');
-        }
-        else {
-            template = template.Replace("@value", cellValue.ToString());
-        }
-        m_defineBuilder.Append(template);
-    }
-
-    public static void MakeCsvDefine(string codePath, string className) {
-        if (m_defineBuilder.Length <= 0) {
-            return;
-        }
-        string definePath = Path.Combine(codePath, className + ".cs");
-        string defineClassStr = TemplateDefineClass.Replace("@className", className)
-            .Replace("#property#", m_defineBuilder.ToString());
-        defineClassStr = Regex.Replace(defineClassStr, "(?<!\r)\n|\r\n", "\n");
-        File.WriteAllText(definePath, defineClassStr);
     }
 }

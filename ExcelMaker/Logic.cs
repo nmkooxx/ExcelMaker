@@ -286,6 +286,10 @@ public class Logic {
         Debug.Log("路径扫描完成，总计文件个数：" + m_excelInfos.Count);
     }
 
+    /// <summary>
+    /// 原件导出，不做同名合并
+    /// Debug用
+    /// </summary>
     public bool keep = false;
 
     private static ExportLanguage s_exportLanguage;
@@ -401,13 +405,19 @@ public class Logic {
             csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
 
             File.WriteAllText(path, csvText);
+            //在本地同时保留一份，方便提交svn对比存档
             File.WriteAllText(localCsvPath, csvText);
             m_logBuilder.AppendLine(path);
 
             if (exportCode) {
                 switch (s_exportLanguage) {
                     case ExportLanguage.CSharp:
-                        CsvMaker_CSharp.MakeCsvClass(codePaths, csvName, m_headers, m_rawTypes, IsSparse(csvName));
+                        if (m_defineStyle) {
+                            DefineMaker_CSharp.MakeClass(codePaths, csvName, m_headers, m_rawTypes);
+                        }
+                        else {
+                            CsvMaker_CSharp.MakeCsvClass(codePaths, csvName, m_headers, m_rawTypes, IsSparse(csvName));
+                        }
                         break;
                     case ExportLanguage.Java:
                         CsvMaker_Java.MakeCsvClass(codePaths, csvName, m_headers, m_rawTypes);
@@ -579,15 +589,19 @@ public class Logic {
     private string m_fileName;
     private string m_filePath;
     private string m_sheetName;
-    private CsvHeader[] m_headers;
-    private CsvNode[] m_nodes;
-    private string[] m_rawTypes;
-    private string[] m_cellTypes;
+    private List<CsvHeader> m_headers = new List<CsvHeader>(64);
+    private List<CsvNode> m_nodes = new List<CsvNode>(64);
+    private List<string> m_rawTypes = new List<string>(64);
+    private List<string> m_cellTypes = new List<string>(64);
     /// <summary>
     /// 常量定义列序号
     /// </summary>
     private int m_defineIndex;
     private string m_defineName;
+    /// <summary>
+    /// 是否是需要竖着读取的定义配置
+    /// </summary>
+    private bool m_defineStyle;
     /// <summary>
     /// 导出前后端列序号
     /// </summary>
@@ -616,14 +630,17 @@ public class Logic {
                     return false;
                 }
 
+                //表头
+                //IRow headRow = sheet.GetRow(1);
+
                 //导出服务器客户端
                 IRow exportRow = sheet.GetRow(3);
-                ICell cell = exportRow.GetCell(0);
-                if (cell == null || cell.StringCellValue == null) {
+                ICell exportCell = exportRow.GetCell(0);
+                if (exportCell == null || exportCell.StringCellValue == null) {
                     Debug.LogError("导出配置错误:" + m_filePath);
                     return false;
                 }
-                if (cell.StringCellValue != "A" && !cell.StringCellValue.Contains(type)) {
+                if (exportCell.StringCellValue != "A" && !exportCell.StringCellValue.Contains(type)) {
                     Debug.LogWarning("跳过导出:" + m_filePath);
                     return false;
                 }
@@ -686,106 +703,115 @@ public class Logic {
 
         m_defineIndex = -1;
         m_exportIndex = -1;
+        m_defineStyle = false;
+
+        ICell headCell = headRow.GetCell(0);
+        if (headCell == null || headCell.StringCellValue == null) {
+            Debug.LogError("导出属性错误:" + m_filePath);
+        }
+        else if (headCell.StringCellValue.Equals("key", StringComparison.OrdinalIgnoreCase)) {
+            m_defineStyle = true;
+        }
 
         if (m_fileName == "Localize") {
             m_defineIndex = 0;
             m_defineName = "i18n";
         }
 
-        m_rawTypes = new string[cellCount];
-        m_cellTypes = new string[cellCount];
-        //第一列为id，只支持int，string
-        cell = typeRow.GetCell(0);
-        string value = cell.StringCellValue;
-        if (value[0] == CsvConfig.skipFlag) {
-            m_rawTypes[0] = value;
-            m_cellTypes[0] = value.Substring(1);
-        }
-        else {
-            m_rawTypes[0] = CsvConfig.skipFlag + value;
-            m_cellTypes[0] = value;
-        }
-        for (int i = 1; i < cellCount; i++) {
-            cell = typeRow.GetCell(i);
-            if (cell == null) {
-                continue;
-            }
-            value = cell.StringCellValue;
-            m_rawTypes[i] = value;
-            int pos = value.LastIndexOf(CsvConfig.classSeparator);
-            if (pos > 0) {
-                m_cellTypes[i] = value.Substring(pos + 1);
+        m_rawTypes.Clear();
+        m_cellTypes.Clear();
+        m_headers.Clear();
+        m_nodes.Clear();
+
+        if (!m_defineStyle) {
+            //第一列为id，只支持int，string
+            cell = typeRow.GetCell(0);
+            string value = cell.StringCellValue;
+            if (value[0] == CsvConfig.skipFlag) {
+                m_rawTypes.Add(value);
+                m_cellTypes.Add(value.Substring(1));
             }
             else {
-                m_cellTypes[i] = value;
+                m_rawTypes.Add(CsvConfig.skipFlag + value);
+                m_cellTypes.Add(value);
             }
-        }
-
-        m_headers = new CsvHeader[cellCount];
-        for (int i = 0; i < cellCount; i++) {
-            if (string.IsNullOrEmpty(exportSettings[i])) {
-                m_headers[i] = CsvHeader.Pop(string.Empty);
-                continue;
-            }
-            if (exportSettings[i] != "A" && !exportSettings[i].Contains(type)) {
-                m_headers[i] = CsvHeader.Pop(string.Empty);
-                continue;
-            }
-
-            cell = headRow.GetCell(i);
-            if (cell == null) {
-                m_headers[i] = CsvHeader.Pop(string.Empty);
-                continue;
+            for (int i = 1; i < cellCount; i++) {
+                cell = typeRow.GetCell(i);
+                if (cell == null) {
+                    continue;
+                }
+                value = cell.StringCellValue;
+                m_rawTypes.Add(value);
+                int pos = value.LastIndexOf(CsvConfig.classSeparator);
+                if (pos > 0) {
+                    m_cellTypes.Add(value.Substring(pos + 1));
+                }
+                else {
+                    m_cellTypes.Add(value);
+                }
             }
 
-            var cellType = m_cellTypes[i];
-            if (cellType == "define") {
-                m_defineIndex = i;
-                m_defineName = cell.StringCellValue;
-                m_headers[i] = CsvHeader.Pop(string.Empty);
-                continue;
-            }
-            if (cellType == "export") {
-                m_exportIndex = i;
-                m_headers[i] = CsvHeader.Pop(string.Empty);
-                continue;
-            }
+            for (int i = 0; i < cellCount; i++) {
+                if (string.IsNullOrEmpty(exportSettings[i])) {
+                    m_headers.Add(CsvHeader.Pop(string.Empty));
+                    continue;
+                }
+                if (exportSettings[i] != "A" && !exportSettings[i].Contains(type)) {
+                    m_headers.Add(CsvHeader.Pop(string.Empty));
+                    continue;
+                }
 
-            m_headers[i] = CsvHeader.Pop(cell.StringCellValue);
-            if (m_headers[i].type == eFieldType.Array && cellType.Length > 2
-                && cellType.EndsWith("[]", StringComparison.OrdinalIgnoreCase)
-                && m_headers[i].name == m_headers[i].baseName) {
-                //去除结尾的[]
-                m_cellTypes[i] = cellType.Substring(0, cellType.Length - 2);
+                cell = headRow.GetCell(i);
+                if (cell == null) {
+                    m_headers.Add(CsvHeader.Pop(string.Empty));
+                    continue;
+                }
+
+                var cellType = m_cellTypes[i];
+                if (cellType == "define") {
+                    m_defineIndex = i;
+                    m_defineName = cell.StringCellValue;
+                    m_headers.Add(CsvHeader.Pop(string.Empty));
+                    continue;
+                }
+                if (cellType == "export") {
+                    m_exportIndex = i;
+                    m_headers.Add(CsvHeader.Pop(string.Empty));
+                    continue;
+                }
+
+                m_headers.Add(CsvHeader.Pop(cell.StringCellValue));
+                if (m_headers[i].type == eFieldType.Array && cellType.Length > 2
+                    && cellType.EndsWith("[]", StringComparison.OrdinalIgnoreCase)
+                    && m_headers[i].name == m_headers[i].baseName) {
+                    //去除结尾的[]
+                    m_cellTypes[i] = cellType.Substring(0, cellType.Length - 2);
+                }
             }
-        }
-        int slot;
-        List<string> nodeSlots = new List<string>(1);
-        List<CsvNode> nodes = new List<CsvNode>(1);
-        for (int i = 0; i < m_headers.Length; i++) {
-            CsvHeader header = m_headers[i];
-            if (header.type == eFieldType.Primitive) {
-                header.SetSlot(-1);
-                continue;
+            int slot;
+            List<string> nodeSlots = new List<string>(1);
+            for (int i = 0; i < m_headers.Count; i++) {
+                CsvHeader header = m_headers[i];
+                if (header.type == eFieldType.Primitive) {
+                    header.SetSlot(-1);
+                    continue;
+                }
+                slot = nodeSlots.IndexOf(header.baseName);
+                if (slot < 0) {
+                    nodeSlots.Add(header.baseName);
+                    header.SetSlot(nodeSlots.Count - 1);
+                    var node = CsvNode.Pop(header.baseName, header.type);
+                    var subTypes = m_rawTypes[i].Split(CsvConfig.arrayChars, CsvConfig.classSeparator);
+                    node.cellType = subTypes[0];
+                    m_nodes.Add(node);
+                }
+                else {
+                    header.SetSlot(slot);
+                }
             }
-            slot = nodeSlots.IndexOf(header.baseName);
-            if (slot < 0) {
-                nodeSlots.Add(header.baseName);
-                header.SetSlot(nodeSlots.Count - 1);
-                var node = CsvNode.Pop(header.baseName, header.type);
-                var subTypes = m_rawTypes[i].Split(CsvConfig.arrayChars, CsvConfig.classSeparator);
-                node.cellType = subTypes[0];
-                nodes.Add(node);
-            }
-            else {
-                header.SetSlot(slot);
-            }
-        }
-        if (nodeSlots.Count > 0) {
-            m_nodes = nodes.ToArray();
         }
         else {
-            m_nodes = new CsvNode[0];
+            m_exportIndex = 2;
         }
 
         headAction();
@@ -795,6 +821,19 @@ public class Logic {
         m_errorIdBuilder.Clear();
 
         return true;
+    }
+
+    private void AppendHeader(string name, string type) {
+        m_rawTypes.Add(type);
+        int pos = type.LastIndexOf(CsvConfig.classSeparator);
+        if (pos > 0) {
+            m_cellTypes.Add(type.Substring(pos + 1));
+        }
+        else {
+            m_cellTypes.Add(type);
+        }
+
+        m_headers.Add(CsvHeader.Pop(name));
     }
 
     private bool ReadExcel(ISheet sheet, char type, Action<char, IRow> rowAction) {
@@ -810,8 +849,8 @@ public class Logic {
             return false;
         }
         int cellCount = nameRow.LastCellNum;
-        if (m_cellTypes.Length != cellCount) {
-            Debug.LogError($"{m_filePath} 表头数量错误：{m_cellTypes.Length} / {cellCount}");
+        if (!m_defineStyle && m_cellTypes.Count != cellCount) {
+            Debug.LogError($"{m_filePath} 表头数量错误：{m_cellTypes.Count} / {cellCount}");
             return false;
         }
 
@@ -859,6 +898,15 @@ public class Logic {
                 if (exportStr != "A" && !exportStr.Contains(type)) {
                     continue;
                 }
+            }
+
+            if (m_defineStyle) {
+                var typeCell = row.GetCell(1);
+                obj = getCellValue(typeCell);
+                if (obj == null) {
+                    continue;
+                }
+                AppendHeader(id, obj.ToString());
             }
 
             try {
@@ -973,8 +1021,11 @@ public class Logic {
     private StringBuilder m_csvBuilder;
     private void initCsv() {
         m_csvBuilder = new StringBuilder();
+        if (m_defineStyle) {
+            return;
+        }
         m_csvBuilder.Append(m_headers[0].name);
-        for (int i = 1; i < m_headers.Length; i++) {
+        for (int i = 1; i < m_headers.Count; i++) {
             var header = m_headers[i];
             if (header.skip) {
                 continue;
@@ -1021,7 +1072,61 @@ public class Logic {
         string cellType;
         string info;
         CsvHeader header;
-        for (int rank = 0; rank < m_headers.Length; rank++) {
+        if (m_defineStyle) {
+            ICell cell = row.GetCell(0);
+            if (cell == null) {
+                return;
+            }
+            value = getCellValue(cell);
+            if (value == null) {
+                return;
+            }
+
+            m_csvBuilder.Append(value.ToString());
+            m_csvBuilder.Append(CsvConfig.delimiter);
+
+            int rank = m_headers.Count - 1;
+            header = m_headers[rank];
+            cellType = m_cellTypes[rank];
+
+            cell = row.GetCell(3);
+            if (cell == null) {
+                m_csvBuilder.Append("\n");
+                return;
+            }
+            value = getCellValue(cell);
+            if (value == null) {
+                m_csvBuilder.Append("\n");
+                return;
+            }
+
+            bool isSimple = CheckSimpleFormat(cellType, value, header, rank);
+            if (!isSimple) {
+                //对象结构需要引号包起来
+                info = value.ToString();
+                if (info.Length <= 0) {
+                    //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    LogError($"{m_fileName} 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    return;
+                }
+                if (cell.CellType == CellType.String) {
+                    bool isJson = CheckJsonFormat(cellType, info, header);
+                    m_csvBuilder.Append(packString(info, isJson, rank));
+                }
+                else {
+                    if (!IsEnum(cellType) && header.subs == null) {
+                        //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError($"{m_fileName} 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    }
+                    m_csvBuilder.Append(packString(info, false, rank));
+                }
+            }
+
+            m_csvBuilder.Append("\n");
+            return;
+        }
+
+        for (int rank = 0; rank < m_headers.Count; rank++) {
             header = m_headers[rank];
             if (header.skip) {
                 continue;
@@ -1318,8 +1423,91 @@ public class Logic {
         CsvHeader header;
         CsvNode node;
         string info;
+        if (m_defineStyle) {
+            int rank = m_headers.Count - 1;
+            header = m_headers[rank];
+
+            var cell = row.GetCell(3);
+            if (cell == null) {
+                return;
+            }
+            value = getCellValue(cell);
+            if (value == null) {
+                return;
+            }
+
+            cellType = m_cellTypes[rank].ToLower();
+            switch (cellType) {
+                case "bool":
+                    token = JToken.FromObject(Convert.ToBoolean(value));
+                    break;
+                case "uint":
+                    token = JToken.FromObject(Convert.ToUInt32(value));
+                    break;
+                case "int":
+                    token = JToken.FromObject(Convert.ToInt32(value));
+                    break;
+                case "ulong":
+                    token = JToken.FromObject(Convert.ToUInt64(value));
+                    break;
+                case "long":
+                case "fixed":
+                    token = JToken.FromObject(Convert.ToInt64(value));
+                    break;
+                case "float":
+                case "double":
+                    token = JToken.FromObject(value);
+                    break;
+                case "string":
+                //json不特殊处理key类型
+                case "localizekey": 
+                case "pathkey":
+                    token = JToken.FromObject(value);
+                    break;
+                default:
+                    info = value.ToString();
+                    if (info.Length <= 0) {
+                        //Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError("格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        return;
+                    }
+                    if (cell.CellType == CellType.String) {
+                        bool isJson = false;
+                        char frist = info[0];
+                        char last = info[info.Length - 1];
+                        if ((frist == '[' && last == ']') || (frist == '{' && last == '}')) {
+                            isJson = true;
+                        }
+                        else {
+                            if (!IsEnum(cellType) && header.subs == null) {
+                                //Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                                Debug.LogError("格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                            }
+                        }
+                        if (isJson) {
+                            token = JToken.Parse(info);
+                        }
+                        else {
+                            token = JToken.FromObject(value);
+                        }
+                    }
+                    else {
+                        if (!IsEnum(cellType) && header.subs == null) {
+                            //Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                            LogError("格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        }
+                        token = JToken.FromObject(Convert.ToInt32(value));
+                    }
+                    break;
+            }
+
+            m_jObject.Add(header.name, token);
+            return;
+        }
+
+
         JObject csv = new JObject();
-        for (int rank = 0; rank < m_headers.Length; rank++) {
+        for (int rank = 0; rank < m_headers.Count; rank++) {
             header = m_headers[rank];
             if (header.skip) {
                 continue;
@@ -1353,6 +1541,9 @@ public class Logic {
                     token = JToken.FromObject(value);
                     break;
                 case "string":
+                //json不特殊处理key类型
+                case "localizekey":
+                case "pathkey":
                     token = JToken.FromObject(value);
                     break;
                 default:
@@ -1407,7 +1598,7 @@ public class Logic {
         }
 
         //最后统一处理多列合并一列的情况，以兼容字段分散的情况
-        for (int i = 0; i < m_nodes.Length; i++) {
+        for (int i = 0; i < m_nodes.Count; i++) {
             node = m_nodes[i];
 
             token = node.ToJToken();

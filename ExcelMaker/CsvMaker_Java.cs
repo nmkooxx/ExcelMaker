@@ -155,7 +155,7 @@ public class @className {
     }
 
     public static void MakeCsvClass(string outPaths, string fileCsv,
-    CsvHeader[] headers, string[] typeStrs) {
+    List<CsvHeader> headers, List<string> typeStrs) {
         string classStr = TemplateClass;
 
         string headerfile;
@@ -177,7 +177,7 @@ public class @className {
         int defineFieldIndex = -1;
         List<string> flagKeys = new List<string>();
 
-        for (int i = 0; i < headers.Length; i++) {
+        for (int i = 0; i < headers.Count; i++) {
             CsvHeader header = headers[i];
             if (header.skip) {
                 continue;
