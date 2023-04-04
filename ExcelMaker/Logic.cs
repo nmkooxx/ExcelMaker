@@ -738,6 +738,8 @@ public class Logic {
             for (int i = 1; i < cellCount; i++) {
                 cell = typeRow.GetCell(i);
                 if (cell == null) {
+                    m_rawTypes.Add(string.Empty);
+                    m_cellTypes.Add(string.Empty);
                     continue;
                 }
                 value = cell.StringCellValue;
