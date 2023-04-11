@@ -525,7 +525,7 @@ public sealed partial class @classPostfix {
     }
 
     public static void MakeCsvDefine(string codePath, string className) {
-        if (m_defineBuilder.Length <= 0) {
+        if (m_defineBuilder == null || m_defineBuilder.Length <= 0) {
             return;
         }
         string definePath = Path.Combine(codePath, className + ".cs");

@@ -209,15 +209,6 @@ public class Logic {
             this.index = index;
 
             DirectoryInfo directoryInfo = new DirectoryInfo(path);
-            if (root.Name == directoryInfo.Parent.Name || root.Name == directoryInfo.Parent.Parent?.Name) {
-                //没有文件夹
-                folder = null;
-            }
-            else {
-                //只保留最后一级文件夹名称
-                folder = directoryInfo.Parent.Name;
-            }
-
             string dirName = directoryInfo.Name;
             string[] keys = dirName.Substring(0, dirName.Length - directoryInfo.Extension.Length).Split('_');
             if (keys.Length >= 2) {
@@ -228,7 +219,18 @@ public class Logic {
                 Debug.LogError($"Excel error name:{dirName}, need format [name]_[desc]");
             }
 
-            id = folder + "_" + name;
+            if (root.Name == directoryInfo.Parent.Name || root.Name == directoryInfo.Parent.Parent?.Name) {
+                //没有文件夹
+                folder = null;
+
+                id = name;
+            }
+            else {
+                //只保留最后一级文件夹名称
+                folder = directoryInfo.Parent.Name;
+
+                id = folder + "_" + name;
+            }
         }
     }
 
@@ -290,7 +292,7 @@ public class Logic {
     /// 原件导出，不做同名合并
     /// Debug用
     /// </summary>
-    public bool keep = false;
+    public bool keepSplit = false;
 
     private static ExportLanguage s_exportLanguage;
     public void Export(string dirPath, bool sync,
@@ -374,7 +376,7 @@ public class Logic {
 
             bool need;
             string csvText;
-            if (keep) {
+            if (keepSplit) {
                 m_logBuilder.AppendLine(path);
                 foreach (var item in list) {
                     paths.Clear();
@@ -383,11 +385,27 @@ public class Logic {
                     if (!need) {
                         continue;
                     }
-                    csvText = m_csvBuilder.ToString();
-                    csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
+                    if (m_fileName == "Localize") {
+                        for (int l = 0; l < m_localizeNames.Length; l++) {
+                            var localizeName = m_localizeNames[l];
+                            csvText = m_localizeBuilders[l].ToString();
+                            csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
 
-                    localCsvPath = localPath + "/" + item.nameWithDir.Replace(".xlsx", ".csv");
-                    File.WriteAllText(localCsvPath, csvText);
+                            localCsvPath = $"{localPath}/{localizeName}/{csvName}.csv";
+                            if (!Directory.Exists(localCsvPath)) {
+                                Directory.CreateDirectory(localCsvPath);
+                            }
+                            File.WriteAllText(localCsvPath, csvText);
+                        }
+                    }
+                    else {
+                        csvText = m_csvBuilder.ToString();
+                        csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
+
+                        localCsvPath = localPath + "/" + item.nameWithDir.Replace(".xlsx", ".csv");
+                        File.WriteAllText(localCsvPath, csvText);
+                    }
+
                 }
 
                 continue;
@@ -401,13 +419,36 @@ public class Logic {
             if (!need) {
                 continue;
             }
-            csvText = m_csvBuilder.ToString();
-            csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
+            if (m_fileName == "Localize") {
+                for (int l = 0; l < m_localizeNames.Length; l++) {
+                    var localizeName = m_localizeNames[l];
+                    csvText = m_localizeBuilders[l].ToString();
+                    csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
 
-            File.WriteAllText(path, csvText);
-            //在本地同时保留一份，方便提交svn对比存档
-            File.WriteAllText(localCsvPath, csvText);
-            m_logBuilder.AppendLine(path);
+                    if (!Directory.Exists($"{dirPath}/{localizeName}/")) {
+                        Directory.CreateDirectory($"{dirPath}/{localizeName}/");
+                    }
+                    path = $"{dirPath}/{localizeName}/{csvName}.csv";
+                    File.WriteAllText(path, csvText);
+                    m_logBuilder.AppendLine(path);
+
+                    if (!Directory.Exists($"{localPath}/{localizeName}/")) {
+                        Directory.CreateDirectory($"{localPath}/{localizeName}/");
+                    }
+                    localCsvPath = $"{localPath}/{localizeName}/{csvName}.csv";
+                    File.WriteAllText(localCsvPath, csvText);
+                }
+            }
+            else {
+                csvText = m_csvBuilder.ToString();
+                csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
+
+                File.WriteAllText(path, csvText);
+                //在本地同时保留一份，方便提交svn对比存档
+                File.WriteAllText(localCsvPath, csvText);
+                m_logBuilder.AppendLine(path);
+            }
+
 
             if (exportCode) {
                 switch (s_exportLanguage) {
@@ -825,6 +866,11 @@ public class Logic {
         return true;
     }
 
+    /// <summary>
+    /// 用于竖行读取Define
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="type"></param>
     private void AppendHeader(string name, string type) {
         m_rawTypes.Add(type);
         int pos = type.LastIndexOf(CsvConfig.classSeparator);
@@ -880,9 +926,9 @@ public class Logic {
             }
 
             if (m_rawIds.Contains(id)) {
-                m_errorIdBuilder.AppendLine("index：" + index + " id:" + id);
+                m_errorIdBuilder.AppendLine($"index：{index} id:{id}");
                 ++m_errorIdNum;
-                //Debug.LogError(m_filePath + " 重复id, index：" + index + " id:" + id);                
+                //Debug.LogError(m_filePath + " 重复id, index：" + index + " id:" + id);
                 continue;
             }
             m_rawIds.Add(id);
@@ -1021,7 +1067,41 @@ public class Logic {
     }
 
     private StringBuilder m_csvBuilder;
+    /// <summary>
+    /// 多语言配置按语言拆多个
+    /// </summary>
+    private StringBuilder[] m_localizeBuilders;
+    private string[] m_localizeNames;
     private void initCsv() {
+        switch (s_exportLanguage) {
+            case ExportLanguage.CSharp:
+                CsvMaker_CSharp.InitCsvDefine();
+                break;
+            case ExportLanguage.Java:
+                CsvMaker_Java.InitCsvDefine();
+                break;
+            case ExportLanguage.TypeScript:
+                CsvMaker_TypeScript.InitCsvDefine();
+                break;
+            default:
+                break;
+        }
+
+        if (m_fileName == "Localize") {
+            var cnt = m_headers.Count - 1;
+            m_localizeBuilders = new StringBuilder[cnt];
+            m_localizeNames = new string[cnt];
+            for (int i = 1; i < m_headers.Count; i++) {
+                var header = m_headers[i];
+                m_localizeNames[i - 1] = header.name;
+                var csvBuilder = new StringBuilder();
+                csvBuilder.AppendLine("id,value,needParse");
+                m_localizeBuilders[i - 1] = csvBuilder;
+            }
+            m_csvBuilder = null;
+            return;
+        }
+
         m_csvBuilder = new StringBuilder();
         if (m_defineStyle) {
             return;
@@ -1034,10 +1114,6 @@ public class Logic {
             }
             m_csvBuilder.Append(CsvConfig.delimiter);
             m_csvBuilder.Append(header.name);
-        }
-        if (m_fileName == "Localize") {
-            m_csvBuilder.Append(CsvConfig.delimiter);
-            m_csvBuilder.Append("needParse");
         }
         m_csvBuilder.Append("\n");
 
@@ -1053,20 +1129,6 @@ public class Logic {
         //             m_csvBuilder.Append(rawType);
         //         }
         //         m_csvBuilder.Append("\n");
-
-        switch (s_exportLanguage) {
-            case ExportLanguage.CSharp:
-                CsvMaker_CSharp.InitCsvDefine();
-                break;
-            case ExportLanguage.Java:
-                CsvMaker_Java.InitCsvDefine();
-                break;
-            case ExportLanguage.TypeScript:
-                CsvMaker_TypeScript.InitCsvDefine();
-                break;
-            default:
-                break;
-        }
     }
 
     private void rowToCsv(char type, IRow row) {
@@ -1125,6 +1187,37 @@ public class Logic {
             }
 
             m_csvBuilder.Append("\n");
+            return;
+        }
+
+        if (m_fileName == "Localize") {
+            ICell cell = row.GetCell(0);
+            value = getCellValue(cell);
+            m_curId = value;
+
+            for (int i = 0; i < m_localizeBuilders.Length; i++) {
+                var csvBuilder = m_localizeBuilders[i];
+                csvBuilder.Append(packString(value.ToString(), false, 0));
+                csvBuilder.Append(CsvConfig.delimiter);
+            }
+
+            for (int rank = 1; rank < m_headers.Count; rank++) {
+                var csvBuilder = m_localizeBuilders[rank -1];
+
+                cell = row.GetCell(rank);
+                if (cell == null) {
+                    csvBuilder.AppendLine(CsvConfig.delimiter);
+                    continue;
+                }
+                value = getCellValue(cell);
+                if (value == null) {
+                    csvBuilder.AppendLine(CsvConfig.delimiter);
+                    continue;
+                }
+
+                csvBuilder.AppendLine(packString(value.ToString(), false, 1));
+            }
+
             return;
         }
 
