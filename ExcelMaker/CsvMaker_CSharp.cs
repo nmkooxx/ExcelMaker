@@ -10,7 +10,7 @@ public class CsvMaker_CSharp {
     static string TemplateClass = @"using System;
 using UnityEngine;
 #headerfile#
-public sealed partial class @className : @classPostfixTemplate<@classKey>, IByteReadable
+public sealed partial class @className : ICfg<@classKey>, IByteReadable
 #if UNITY_EDITOR
     , IByteWriteable
 #endif
@@ -28,7 +28,7 @@ public sealed partial class @className : @classPostfixTemplate<@classKey>, IByte
         }
     }
 
-    public void SetFieldByNode(string field, CsvNode node) {
+    public void SetFieldByNode(string field, Node node) {
         switch (field) {#NodeCase#
             default:
                 break;
@@ -39,12 +39,12 @@ public sealed partial class @className : @classPostfixTemplate<@classKey>, IByte
     }
 
 #if UNITY_EDITOR
-    public void Serialize(CsvHelper.ByteWriter writer) {#ByteWrite#
+    public void Serialize(ByteWriter writer) {#ByteWrite#
     }
 #endif
 }
 
-public sealed partial class @classNameReader : @classPostfixReader<@classKey, @className> {
+public sealed partial class @classNameReader : CfgReader<@classKey, @className> {
     protected override void InitKeys() {
         for (int i = 0; i < m_Keys.Length; i++) {
             m_ByteReader.Read(ref m_Keys[i]);
@@ -59,7 +59,7 @@ public sealed partial class @classPostfix {
         get {
             if (null == m_@class) {
                 m_@class = new @classNameReader();
-                m_@class.csvName = ""@fileName"";
+                m_@class.name = ""@fileName"";
             }
             return m_@class;
         }
@@ -121,7 +121,7 @@ public sealed partial class @classPostfix {
     private @typeInt i_@name;
     public @typeString @name {
         get {
-            return Cfg.PathKey.Convert(i_@name, c_id);
+            return CoreCfg.PathKey.Convert(i_@name, c_id);
         }
     }";
 
@@ -142,7 +142,7 @@ public sealed partial class @classPostfix {
                 return null;
             }
             if (null == t_@name) {
-                t_@name = Cfg.PathKey.Convert(i_@name, c_id);
+                t_@name = CoreCfg.PathKey.Convert(i_@name, c_id);
             }
             return t_@name;
         }
@@ -502,7 +502,7 @@ public sealed partial class @classPostfix {
                 Directory.CreateDirectory(outPath);
             }
             string filePath = Path.Combine(outPath, fileName);
-            File.WriteAllText(filePath, classStr);
+            File.WriteAllText(filePath, classStr, Encoding.UTF8);
             Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
         }
     }
@@ -532,6 +532,6 @@ public sealed partial class @classPostfix {
         string defineClassStr = TemplateDefineClass.Replace("@className", className)
             .Replace("#property#", m_defineBuilder.ToString());
         defineClassStr = Regex.Replace(defineClassStr, "(?<!\r)\n|\r\n", "\n");
-        File.WriteAllText(definePath, defineClassStr);
+        File.WriteAllText(definePath, defineClassStr, Encoding.UTF8);
     }
 }

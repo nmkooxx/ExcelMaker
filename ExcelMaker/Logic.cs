@@ -299,7 +299,6 @@ public class Logic {
         char type, ExportType exportType, ExportLanguage language, string codePath, bool exportCode) {
         s_exportLanguage = language;
         m_logBuilder.Clear();
-        m_PathKeys.Clear();
         switch (exportType) {
             case ExportType.Csv:
                 exportCsv(dirPath, sync, type, codePath, exportCode);
@@ -707,8 +706,6 @@ public class Logic {
             }
         }
 
-        m_Localizes.Clear();
-
         if (m_errorIdNum > 0) {
             Debug.LogError($"{m_fileName} 重复id数量：{m_errorIdNum}，详见ExcelMakerLog.txt");
             m_errorIdBuilder.Insert(0, $"{m_fileName} 重复id数量:{m_errorIdNum}  列表：\n");
@@ -982,20 +979,36 @@ public class Logic {
         Debug.LogError(m_errorBuilder.ToString());
     }
 
-    private object m_curId;
-    private Dictionary<string, string> m_Localizes = new Dictionary<string, string>();
-    private const string kLocalizeRefTag = "[id=";
-
-    private Dictionary<int, string> m_LocalizeKeys = new Dictionary<int, string>();
-    private Dictionary<int, string> m_PathKeys = new Dictionary<int, string>();
-
     /// <summary>
     /// 将含有特殊符号的字符串包裹起来
-    /// 不支持Json格式的String[]
     /// </summary>
     /// <param name="rawString"></param>
     /// <returns></returns>
-    private string packString(string rawString, bool force, int slot) {
+    private string packString(string rawString, bool force) {
+        string newString = rawString;
+        if (force || rawString.IndexOf(CsvConfig.delimiter) > 0) {
+            if (rawString.IndexOf(CsvConfig.quote) > 0) {
+                //在非第一个字符串中出现引号，则需要替换
+                newString = newString.Replace("\"", "\"\"");
+            }
+            //出现逗号分隔符，需要包裹
+            newString = string.Format("\"{0}\"", newString);
+        }
+
+        if (newString.IndexOf("\n") > 0
+        || newString.IndexOf("\t") > 0
+        || newString.IndexOf("\\") > 0
+        ) {
+            LogError("文本含特殊符号, index：" + m_curIndex + " info:" + rawString);
+        }
+
+        return newString;
+    }
+
+    private object m_localizeId;
+    private Dictionary<string, string>[] m_LocalizeReplaces;
+    private const string kLocalizeRefTag = "[id=";
+    private string packLocalizeString(string rawString, bool force, int slot) {
         string newString = rawString;
         if (force || rawString.IndexOf(CsvConfig.delimiter) > 0) {
             if (rawString.IndexOf(CsvConfig.quote) > 0) {
@@ -1007,60 +1020,49 @@ public class Logic {
         }
 
         //多语言表才可能出现复杂的格式
-        if (m_fileName == "Localize") {
-            newString = newString.Replace("\n\r", "\\n")
-                .Replace("\r\n", "\\n")
-                .Replace("\r", "\\n")
-                .Replace("\n", "\\n")
-                .Replace("\t", "\\t")
-                ;
+        newString = newString.Replace("\n\r", "\\n")
+            .Replace("\r\n", "\\n")
+            .Replace("\r", "\\n")
+            .Replace("\n", "\\n")
+            .Replace("\t", "\\t")
+            ;
 
-            int startIdx = newString.IndexOf(kLocalizeRefTag);
-            if (startIdx >= 0) {
-                while (startIdx >= 0) {
-                    int keyStartIdx = startIdx + kLocalizeRefTag.Length;
-                    int endIdx = newString.IndexOf("]", startIdx);
-                    if (endIdx <= keyStartIdx) {
-                        //找不到就报错，跳出替换
-                        LogError($"多语言找不到替换内容, index：{m_curIndex} startIdx:{startIdx} info:{rawString}");
-                        startIdx = -1;
-                        break;
-                    }
-                    string key = newString.Substring(keyStartIdx, endIdx - keyStartIdx);
-                    if (!m_Localizes.TryGetValue(key, out var value)) {
-                        //找不到就报错，跳出替换
-                        LogError($"多语言找不到替换内容, index：{m_curIndex} key:{key} info:{rawString}");
-                        startIdx = -1;
-                        break;
-                    }
-                    newString = newString.Replace(kLocalizeRefTag + key + "]", value);
-                    startIdx = newString.IndexOf(kLocalizeRefTag, startIdx);
+        var replace = m_LocalizeReplaces[slot];
+        int startIdx = newString.IndexOf(kLocalizeRefTag);
+        if (startIdx >= 0) {
+            while (startIdx >= 0) {
+                int keyStartIdx = startIdx + kLocalizeRefTag.Length;
+                int endIdx = newString.IndexOf("]", startIdx);
+                if (endIdx <= keyStartIdx) {
+                    //找不到就报错，跳出替换
+                    LogError($"多语言找不到替换内容, index：{m_curIndex} startIdx:{startIdx} info:{rawString}");
+                    startIdx = -1;
+                    break;
                 }
-            }
-            else {
-                //不同的多语言会覆盖之前的，简单无需解析的id要填前面
-                m_Localizes[m_curId.ToString()] = newString;
-            }
-
-            if (newString.IndexOf("\n") > 0
-            || newString.IndexOf("\t") > 0
-            || newString.IndexOf("\\") > 0
-            ) {
-                newString += ",1";
-            }
-            else {
-                if (slot > 0) {
-                    newString += ",";
+                string key = newString.Substring(keyStartIdx, endIdx - keyStartIdx);
+                if (!replace.TryGetValue(key, out var value)) {
+                    //找不到就报错，跳出替换
+                    LogError($"多语言找不到替换内容, index：{m_curIndex} key:{key} info:{rawString}");
+                    startIdx = -1;
+                    break;
                 }
+                newString = newString.Replace(kLocalizeRefTag + key + "]", value);
+                startIdx = newString.IndexOf(kLocalizeRefTag, startIdx);
             }
         }
         else {
-            if (newString.IndexOf("\n") > 0
-            || newString.IndexOf("\t") > 0
-            || newString.IndexOf("\\") > 0
-            ) {
-                LogError("文本含特殊符号, index：" + m_curIndex + " info:" + rawString);
-            }
+            //不同的多语言会覆盖之前的，简单无需解析的id要填前面
+            replace[m_localizeId.ToString()] = newString;
+        }
+
+        if (newString.IndexOf("\n") > 0
+        || newString.IndexOf("\t") > 0
+        || newString.IndexOf("\\") > 0
+        ) {
+            newString += ",1";
+        }
+        else {
+            newString += ",";
         }
 
         return newString;
@@ -1091,12 +1093,14 @@ public class Logic {
             var cnt = m_headers.Count - 1;
             m_localizeBuilders = new StringBuilder[cnt];
             m_localizeNames = new string[cnt];
+            m_LocalizeReplaces = new Dictionary<string, string>[cnt];
             for (int i = 1; i < m_headers.Count; i++) {
                 var header = m_headers[i];
                 m_localizeNames[i - 1] = header.name;
                 var csvBuilder = new StringBuilder();
                 csvBuilder.AppendLine("id,value,needParse");
                 m_localizeBuilders[i - 1] = csvBuilder;
+                m_LocalizeReplaces[i - 1] = new Dictionary<string, string>();
             }
             m_csvBuilder = null;
             return;
@@ -1175,14 +1179,14 @@ public class Logic {
                 }
                 if (cell.CellType == CellType.String) {
                     bool isJson = CheckJsonFormat(cellType, info, header);
-                    m_csvBuilder.Append(packString(info, isJson, rank));
+                    m_csvBuilder.Append(packString(info, isJson));
                 }
                 else {
                     if (!IsEnum(cellType) && header.subs == null) {
                         //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                         LogError($"{m_fileName} 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
-                    m_csvBuilder.Append(packString(info, false, rank));
+                    m_csvBuilder.Append(packString(info, false));
                 }
             }
 
@@ -1193,11 +1197,11 @@ public class Logic {
         if (m_fileName == "Localize") {
             ICell cell = row.GetCell(0);
             value = getCellValue(cell);
-            m_curId = value;
+            m_localizeId = value;
 
             for (int i = 0; i < m_localizeBuilders.Length; i++) {
                 var csvBuilder = m_localizeBuilders[i];
-                csvBuilder.Append(packString(value.ToString(), false, 0));
+                csvBuilder.Append(packString(value.ToString(), false));
                 csvBuilder.Append(CsvConfig.delimiter);
             }
 
@@ -1215,7 +1219,7 @@ public class Logic {
                     continue;
                 }
 
-                csvBuilder.AppendLine(packString(value.ToString(), false, 1));
+                csvBuilder.AppendLine(packLocalizeString(value.ToString(), false, rank - 1));
             }
 
             return;
@@ -1261,9 +1265,7 @@ public class Logic {
                     }
                 }
             }
-            if (rank == 0) {
-                m_curId = value;
-            }
+
             bool isSimple = CheckSimpleFormat(cellType, value, header, rank);
             if (!isSimple) {
                 //对象结构需要引号包起来
@@ -1275,14 +1277,14 @@ public class Logic {
                 }
                 if (cell.CellType == CellType.String) {
                     bool isJson = CheckJsonFormat(cellType, info, header);
-                    m_csvBuilder.Append(packString(info, isJson, rank));
+                    m_csvBuilder.Append(packString(info, isJson));
                 }
                 else {
                     if (!IsEnum(cellType) && header.subs == null) {
                         //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                         LogError($"{m_fileName} 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
-                    m_csvBuilder.Append(packString(info, false, rank));
+                    m_csvBuilder.Append(packString(info, false));
                 }
             }
         }
@@ -1321,8 +1323,7 @@ public class Logic {
     }
 
     private bool CheckSimpleFormat(string cellType, object value, CsvHeader header, int slot) {
-        string key, existKey;
-        int hashcode;
+        string key;
         switch (cellType.ToLower()) {
             case "bool":
                 if (value is string strb) {
@@ -1392,39 +1393,15 @@ public class Logic {
                 m_csvBuilder.Append(value);
                 break;
             case "string":
-                m_csvBuilder.Append(packString(value.ToString(), false, slot));
+                m_csvBuilder.Append(packString(value.ToString(), false));
                 break;
             case "localizekey": //LocalizeKey
-                key = packString(value.ToString(), false, slot);
-                hashcode = key.GetHashCode();
-                //m_csvBuilder.Append(hashcode);
+                key = packString(value.ToString(), false);
                 m_csvBuilder.Append(key);
-
-                if (m_LocalizeKeys.TryGetValue(hashcode, out existKey)) {
-                    //找不到就报错，跳出替换
-                    if (existKey != key) {
-                        LogError($"{m_fileName} 多语言hash冲突, hashcode：{hashcode} key:{key} existKey:{existKey}");
-                    }
-                }
-                else {
-                    m_LocalizeKeys[hashcode] = key;
-                }
                 break;
             case "pathkey": //PathKey
-                key = packString(value.ToString(), false, slot);
-                hashcode = key.GetHashCode();
-                //m_csvBuilder.Append(hashcode);
+                key = packString(value.ToString(), false);
                 m_csvBuilder.Append(key);
-
-                if (m_PathKeys.TryGetValue(hashcode, out existKey)) {
-                    //找不到就报错，跳出替换
-                    if (existKey != key) {
-                        LogError($"{m_fileName} PathKey hash冲突, hashcode：{hashcode} key:{key} existKey:{existKey}");
-                    }
-                }
-                else {
-                    m_PathKeys[hashcode] = key;
-                }
                 break;
             default:
                 return false;
