@@ -1274,10 +1274,6 @@ public class Logic {
                     //可能是公式填写
                     continue;
                 }
-                if (info.Length < 2) {
-                    LogError($"{m_fileName} 扩展格式错误, index：{m_curIndex} header:{header.name} type:{cellType} info:{value}");
-                    continue;
-                }
                 if (cell.CellType == CellType.String) {
                     bool isJson = CheckJsonFormat(cellType, info, header);
                     m_csvBuilder.Append(packString(info, isJson));
@@ -1495,7 +1491,7 @@ public class Logic {
                 }
                 if (!IsEnum(cellType) && header.subs == null) {
                     //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                    LogError("扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + info);
+                    LogError($"{m_fileName} 扩展格式错误,index:{m_curIndex} header:{header.name} info:{info}");
                 }
                 return false;
             }
@@ -1539,8 +1535,7 @@ public class Logic {
             var obj = JsonConvert.DeserializeObject(info);
         }
         catch (Exception e) {
-            //Debug.LogError(m_filePath + " Json格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-            LogError("Json对象解析错误, index：" + m_curIndex + " header:" + header.name + " info:" + info + "\n" + e);
+            LogError($"{m_fileName} Json对象解析错误, index:{m_curIndex} header:{header.name} info:{info} \n{e}");
         }
     }
 
@@ -1605,9 +1600,7 @@ public class Logic {
                     break;
                 default:
                     info = value.ToString();
-                    if (info.Length <= 0) {
-                        //Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                        LogError("格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    if (string.IsNullOrWhiteSpace(info)) {
                         return;
                     }
                     if (cell.CellType == CellType.String) {
