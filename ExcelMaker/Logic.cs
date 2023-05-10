@@ -1233,7 +1233,7 @@ public class Logic {
 
             if (rank != 0) {
                 m_csvBuilder.Append(CsvConfig.delimiter);
-            }            
+            }
             ICell cell = row.GetCell(rank);
             if (cell == null) {
                 continue;
@@ -1270,10 +1270,13 @@ public class Logic {
             if (!isSimple) {
                 //对象结构需要引号包起来
                 info = value.ToString();
-                if (info.Length <= 0) {
-                    //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                    LogError($"{m_fileName} 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                    break;
+                if (string.IsNullOrWhiteSpace(info)) {
+                    //可能是公式填写
+                    continue;
+                }
+                if (info.Length < 2) {
+                    LogError($"{m_fileName} 扩展格式错误, index：{m_curIndex} header:{header.name} type:{cellType} info:{value}");
+                    continue;
                 }
                 if (cell.CellType == CellType.String) {
                     bool isJson = CheckJsonFormat(cellType, info, header);
@@ -1281,8 +1284,7 @@ public class Logic {
                 }
                 else {
                     if (!IsEnum(cellType) && header.subs == null) {
-                        //Debug.LogError(m_filePath + " 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                        LogError($"{m_fileName} 扩展格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        LogError($"{m_fileName} 未定义扩展格式, index：{m_curIndex} header:{header.name} type:{cellType} info:{value}");
                     }
                     m_csvBuilder.Append(packString(info, false));
                 }
@@ -1324,44 +1326,82 @@ public class Logic {
 
     private bool CheckSimpleFormat(string cellType, object value, CsvHeader header, int slot) {
         string key;
+        string str;
         switch (cellType.ToLower()) {
             case "bool":
                 if (value is string strb) {
                     if (!string.IsNullOrWhiteSpace(strb)) {
-                        LogError($"{m_fileName} bool格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        str = strb;
+                        if (strb.Equals("true", StringComparison.OrdinalIgnoreCase)) {
+                            str = "1";
+                        }
+                        else if (strb.Equals("false", StringComparison.OrdinalIgnoreCase)) {
+                            str = "0";
+                        }
+                        else if (str == "1") {
+
+                        }
+                        else if (str == "0") {
+                            
+                        }
+                        else if (string.IsNullOrWhiteSpace(str)) {
+                            str = string.Empty;
+                        }
+                        else {
+                            LogError($"{m_fileName} bool格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        }
                     }
                     else {
-                        value = string.Empty;
+                        str = string.Empty;
                     }
                 }
                 else {
-                    var info = value.ToString();
-                    if (info != "1" && info != "0") {
+                    str = value.ToString();
+                    if (str == "1") {
+                        
+                    }
+                    else if (str == "0") {
+                        
+                    }
+                    else if (string.IsNullOrWhiteSpace(str)) {
+                        str = string.Empty;
+                    }
+                    else {
                         LogError($"{m_fileName} bool格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                     }
                 }
-                m_csvBuilder.Append(value);
+                m_csvBuilder.Append(str);
                 break;
             case "uint":
             case "ulong":
                 if (value is string stru) {
                     if (!string.IsNullOrWhiteSpace(stru)) {
-                        LogError($"{m_fileName} 正整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        str = stru;
+                        //检查是否字符串格式的数字
+                        if (ulong.TryParse(stru, out ulong ul)) {
+
+                        }
+                        else {
+                            LogError($"{m_fileName} 正整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        }
                     }
                     else {
-                        value = string.Empty;
+                        str = string.Empty;
                     }
                 }
                 else {
-                    var info = value.ToString();
-                    if (info.IndexOf('.') >= 0) {
-                        LogError($"{m_fileName} 正整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    str = value.ToString();
+                    if (str.IndexOf('.') >= 0) {
+                        LogError($"{m_fileName} 正整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + str);
                     }
-                    else if (info[0] == '-') {
-                        LogError($"{m_fileName} 正整数填写了负数, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                    else if (str[0] == '-') {
+                        LogError($"{m_fileName} 正整数填写了负数, index：" + m_curIndex + " header:" + header.name + " info:" + str);
+                    }
+                    else if (string.IsNullOrWhiteSpace(str)) {
+                        str = string.Empty;
                     }
                 }
-                m_csvBuilder.Append(value);
+                m_csvBuilder.Append(str);
                 break;
             case "int":
             case "long":
@@ -1369,31 +1409,58 @@ public class Logic {
                 //Debug.Log("value:" + value + " type:" + value.GetType());
                 if (value is string stri) {
                     if (!string.IsNullOrWhiteSpace(stri)) {
-                        LogError($"{m_fileName} 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        str = stri;
+                        //检查是否字符串格式的数字
+                        if (ulong.TryParse(stri, out var l)) {
+
+                        }
+                        else {
+                            LogError($"{m_fileName} 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        }
                     }
                     else {
-                        value = string.Empty;
+                        str = string.Empty;
                     }
                 }
-                else if (value.ToString().IndexOf('.') >= 0) {
-                    LogError($"{m_fileName} 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                else {
+                    str = value.ToString();
+                    if (str.IndexOf('.') >= 0) {
+                        LogError($"{m_fileName} 整数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + str);
+                    }
+                    else if (string.IsNullOrWhiteSpace(str)) {
+                        str = string.Empty;
+                    }
                 }
-                m_csvBuilder.Append(value);
+                m_csvBuilder.Append(str);
                 break;
             case "float":
             case "double":
                 if (value is string strf) {
                     if (!string.IsNullOrWhiteSpace(strf)) {
-                        LogError($"{m_fileName} 小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        str = strf;
+                        //检查是否字符串格式的数字
+                        if (double.TryParse(strf, out var d)) {
+
+                        }
+                        else {
+                            LogError($"{m_fileName} 小数格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
+                        }
                     }
                     else {
-                        value = string.Empty;
+                        str = string.Empty;
                     }
                 }
-                m_csvBuilder.Append(value);
+                else {
+                    str = value.ToString();
+                    if (string.IsNullOrWhiteSpace(str)) {
+                        str = string.Empty;
+                    }
+                }
+                m_csvBuilder.Append(str);
                 break;
             case "string":
-                m_csvBuilder.Append(packString(value.ToString(), false));
+                str = packString(value.ToString(), false);
+                m_csvBuilder.Append(str);
                 break;
             case "localizekey": //LocalizeKey
                 key = packString(value.ToString(), false);
