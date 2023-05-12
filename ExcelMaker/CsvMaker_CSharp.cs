@@ -97,25 +97,21 @@ public sealed partial class @classPostfix {
     #if UNITY_EDITOR
     private @typeString c_@name;
     public @typeString @nameRaw {
-        get {
-            return c_@name;
-        }
+        get { return c_@name; }
+        set { c_@name = value; }
     }
     #endif
     private @typeInt i_@name;
     public @typeInt @name {
-        get {
-            return i_@name;
-        }
+        get { return i_@name; }
     }";
 
     static string TemplatePathKeyProperty = @"
     #if UNITY_EDITOR
     private @typeString c_@name;
     public @typeString @nameRaw {
-        get {
-            return c_@name;
-        }
+        get { return c_@name; }
+        set { c_@name = value; }
     }
     #endif
     private @typeInt i_@name;
@@ -129,9 +125,8 @@ public sealed partial class @classPostfix {
     #if UNITY_EDITOR
     private @typeString c_@name;
     public @typeString @nameRaw {
-        get {
-            return c_@name;
-        }
+        get { return c_@name; }
+        set { c_@name = value; }
     }
     #endif
     private @typeInt i_@name;
