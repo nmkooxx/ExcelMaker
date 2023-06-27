@@ -384,7 +384,7 @@ public class Logic {
                     if (!need) {
                         continue;
                     }
-                    if (m_fileName == "Localize") {
+                    if (m_fileName == "Localize" || m_fileName == "Text") {
                         for (int l = 0; l < m_localizeNames.Length; l++) {
                             var localizeName = m_localizeNames[l];
                             csvText = m_localizeBuilders[l].ToString();
@@ -418,7 +418,7 @@ public class Logic {
             if (!need) {
                 continue;
             }
-            if (m_fileName == "Localize") {
+            if (m_fileName == "Localize" || m_fileName == "Text") {
                 for (int l = 0; l < m_localizeNames.Length; l++) {
                     var localizeName = m_localizeNames[l];
                     csvText = m_localizeBuilders[l].ToString();
@@ -987,10 +987,8 @@ public class Logic {
     private string packString(string rawString, bool force) {
         string newString = rawString;
         if (force || rawString.IndexOf(CsvConfig.delimiter) > 0) {
-            if (rawString.IndexOf(CsvConfig.quote) > 0) {
-                //在非第一个字符串中出现引号，则需要替换
-                newString = newString.Replace("\"", "\"\"");
-            }
+            //引号要替换成双引号
+            newString = newString.Replace("\"", "\"\"");
             //出现逗号分隔符，需要包裹
             newString = string.Format("\"{0}\"", newString);
         }
@@ -1011,10 +1009,8 @@ public class Logic {
     private string packLocalizeString(string rawString, bool force, int slot) {
         string newString = rawString;
         if (force || rawString.IndexOf(CsvConfig.delimiter) > 0) {
-            if (rawString.IndexOf(CsvConfig.quote) > 0) {
-                //在非第一个字符串中出现引号，则需要替换
-                newString = newString.Replace("\"", "\"\"");
-            }
+            //引号要替换成双引号
+            newString = newString.Replace("\"", "\"\"");
             //出现逗号分隔符，需要包裹
             newString = string.Format("\"{0}\"", newString);
         }
@@ -1089,7 +1085,7 @@ public class Logic {
                 break;
         }
 
-        if (m_fileName == "Localize") {
+        if (m_fileName == "Localize" || m_fileName == "Text") {
             var cnt = m_headers.Count - 1;
             m_localizeBuilders = new StringBuilder[cnt];
             m_localizeNames = new string[cnt];
@@ -1194,7 +1190,7 @@ public class Logic {
             return;
         }
 
-        if (m_fileName == "Localize") {
+        if (m_fileName == "Localize" || m_fileName == "Text") {
             ICell cell = row.GetCell(0);
             value = getCellValue(cell);
             m_localizeId = value;
