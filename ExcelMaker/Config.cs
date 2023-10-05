@@ -16,11 +16,11 @@ public enum ExportLanguage {
 }
 
 public class Config {
-    public string rootPath = "excel";
-    public string serverPath = "server";
-    public string serverCodePath = "serverCode";
-    public string clientPath = "client";
-    public string clientCodePath = "clientCode";
+    public string rootPath = "_Excel";
+    public string serverPath = "Export/Server";
+    public string serverCodePath = "Export/ServerCode";
+    public string clientPath = "Export/Client";
+    public string clientCodePath = "Export/ClientCode";
 }
 
 public class Combine {
@@ -51,7 +51,7 @@ public class Setting {
 
     public Combine[] combines;
 
-    public string classPostfix = "Csv";
+    public string classPostfix = "Cfg";
 
     /// <summary>
     /// 稀疏表名称
