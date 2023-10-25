@@ -51,9 +51,11 @@ public class Logic {
         }
     }
 
+    private static readonly Encoding m_Encoding = new UTF8Encoding(false);
+
     public void WriteConfig() {
         string text = JsonConvert.SerializeObject(m_config, m_jsonSettings);
-        File.WriteAllText(m_configPath, text);
+        File.WriteAllText(m_configPath, text, m_Encoding);
         m_rootInfo = new DirectoryInfo(m_config.rootPath);
     }
 
@@ -394,7 +396,7 @@ public class Logic {
                             if (!Directory.Exists(localCsvPath)) {
                                 Directory.CreateDirectory(localCsvPath);
                             }
-                            File.WriteAllText(localCsvPath, csvText);
+                            File.WriteAllText(localCsvPath, csvText, m_Encoding);
                         }
                     }
                     else {
@@ -402,7 +404,7 @@ public class Logic {
                         csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
 
                         localCsvPath = localPath + "/" + item.nameWithDir.Replace(".xlsx", ".csv");
-                        File.WriteAllText(localCsvPath, csvText);
+                        File.WriteAllText(localCsvPath, csvText, m_Encoding);
                     }
 
                 }
@@ -428,23 +430,23 @@ public class Logic {
                         Directory.CreateDirectory($"{dirPath}/{localizeName}/");
                     }
                     path = $"{dirPath}/{localizeName}/{csvName}.csv";
-                    File.WriteAllText(path, csvText);
+                    File.WriteAllText(path, csvText, m_Encoding);
                     m_logBuilder.AppendLine(path);
 
                     if (!Directory.Exists($"{localPath}/{localizeName}/")) {
                         Directory.CreateDirectory($"{localPath}/{localizeName}/");
                     }
                     localCsvPath = $"{localPath}/{localizeName}/{csvName}.csv";
-                    File.WriteAllText(localCsvPath, csvText);
+                    File.WriteAllText(localCsvPath, csvText, m_Encoding);
                 }
             }
             else {
                 csvText = m_csvBuilder.ToString();
                 csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
 
-                File.WriteAllText(path, csvText);
+                File.WriteAllText(path, csvText, m_Encoding);
                 //在本地同时保留一份，方便提交svn对比存档
-                File.WriteAllText(localCsvPath, csvText);
+                File.WriteAllText(localCsvPath, csvText, m_Encoding);
                 m_logBuilder.AppendLine(path);
             }
 
@@ -582,7 +584,7 @@ public class Logic {
             }
             string text = JsonConvert.SerializeObject(m_jObject, m_jsonSettings);
             text = Regex.Replace(text, "(?<!\r)\n|\r\n", "\n");
-            File.WriteAllText(path, text);
+            File.WriteAllText(path, text, m_Encoding);
 
             m_logBuilder.AppendLine(path);
         }

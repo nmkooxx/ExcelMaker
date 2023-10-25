@@ -212,6 +212,8 @@ public sealed partial class Define {
         LocalizeKey,
     }
 
+    private static readonly Encoding m_Encoding = new UTF8Encoding(false);
+
     public static void MakeClass(string outPaths, string fileCsv,
         List<CsvHeader> headers, List<string> typeStrs) {
         //string fileCsv = Path.GetFileNameWithoutExtension(file);
@@ -409,7 +411,7 @@ public sealed partial class Define {
                 Directory.CreateDirectory(outPath);
             }
             string filePath = Path.Combine(outPath, fileName);
-            File.WriteAllText(filePath, classStr);
+            File.WriteAllText(filePath, classStr, m_Encoding);
             Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
         }
     }

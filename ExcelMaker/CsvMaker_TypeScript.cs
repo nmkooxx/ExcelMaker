@@ -163,6 +163,8 @@ export class @classNameCsvReader extends CsvHelper.CsvReader<@classNameCsv> {
         return m_type2Headers.TryGetValue(type, out header);
     }
 
+    private static readonly Encoding m_Encoding = new UTF8Encoding(false);
+
     public static void MakeCsvClass(string outPaths, string fileCsv,
         List<CsvHeader> headers, List<string> typeStrs,
         string headExtend, string csvExtend, string readerExtend) {
@@ -309,7 +311,7 @@ export class @classNameCsvReader extends CsvHelper.CsvReader<@classNameCsv> {
                 Directory.CreateDirectory(outPath);
             }
             string filePath = Path.Combine(outPath, fileName);
-            File.WriteAllText(filePath, classStr);
+            File.WriteAllText(filePath, classStr, m_Encoding);
             Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
         }
     }
@@ -339,7 +341,7 @@ export class @classNameCsvReader extends CsvHelper.CsvReader<@classNameCsv> {
         string defineClassStr = TemplateDefineClass.Replace("@className", className)
             .Replace("#property#", m_defineBuilder.ToString());
         defineClassStr = Regex.Replace(defineClassStr, "(?<!\r)\n|\r\n", "\n");
-        File.WriteAllText(definePath, defineClassStr);
+        File.WriteAllText(definePath, defineClassStr, m_Encoding);
     }
 
     static string TemplateCatalog;
@@ -419,6 +421,6 @@ export const Csv = new _Csv();";
         string defineClassStr = TemplateCatalog.Replace("@Import", m_catalogImportBuilder.ToString())
             .Replace("@Property", m_catalogPropertyBuilder.ToString());
         defineClassStr = Regex.Replace(defineClassStr, "(?<!\r)\n|\r\n", "\n");
-        File.WriteAllText(definePath, defineClassStr);
+        File.WriteAllText(definePath, defineClassStr, m_Encoding);
     }
 }

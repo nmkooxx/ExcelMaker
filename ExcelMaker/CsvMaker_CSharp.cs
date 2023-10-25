@@ -277,6 +277,8 @@ public sealed partial class @classPostfix {
         LocalizeKey,
     }
 
+    private static readonly Encoding m_Encoding = new UTF8Encoding(false);
+
     public static void MakeCsvClass(string outPaths, string fileCsv,
         List<CsvHeader> headers, List<string> typeStrs, bool isSparse) {
         //string fileCsv = Path.GetFileNameWithoutExtension(file);
@@ -477,7 +479,7 @@ public sealed partial class @classPostfix {
         classStr = classStr.Replace("@className", className);
         classStr = classStr.Replace("@classKey", classKey);
         classStr = classStr.Replace("@classPostfix", CsvConfig.classPostfix);
-        classStr = classStr.Replace("@class", fileCsvUpper);        
+        classStr = classStr.Replace("@class", fileCsvUpper);
         classStr = classStr.Replace("@fileName", fileCsv);
         classStr = classStr.Replace("#headerfile#", headerfile);
         classStr = classStr.Replace("#property#", propertyBuilder.ToString());
@@ -497,7 +499,7 @@ public sealed partial class @classPostfix {
                 Directory.CreateDirectory(outPath);
             }
             string filePath = Path.Combine(outPath, fileName);
-            File.WriteAllText(filePath, classStr, Encoding.UTF8);
+            File.WriteAllText(filePath, classStr, m_Encoding);
             Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
         }
     }
@@ -527,6 +529,6 @@ public sealed partial class @classPostfix {
         string defineClassStr = TemplateDefineClass.Replace("@className", className)
             .Replace("#property#", m_defineBuilder.ToString());
         defineClassStr = Regex.Replace(defineClassStr, "(?<!\r)\n|\r\n", "\n");
-        File.WriteAllText(definePath, defineClassStr, Encoding.UTF8);
+        File.WriteAllText(definePath, defineClassStr, m_Encoding);
     }
 }
