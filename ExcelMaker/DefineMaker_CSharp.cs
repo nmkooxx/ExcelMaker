@@ -124,7 +124,7 @@ public sealed partial class Define {
     static string TemplateClassWrite = @"
         @typeConverter.Inst.Write(writer, c_@name);";
 
-    static string mSuffixName = ".cs";
+    const string kSuffixName = ".cs";
 
     private static string GetSysType(string typeName, out PropertyType propertyType) {
         propertyType = PropertyType.Base;
@@ -400,7 +400,7 @@ public sealed partial class Define {
 
         classStr = Regex.Replace(classStr, "(?<!\r)\n|\r\n", "\n");
 
-        string fileName = className + mSuffixName;
+        string fileName = className + kSuffixName;
         string[] outPathArrray = outPaths.Split(';');
         foreach (string outPath in outPathArrray)
         {
@@ -410,7 +410,7 @@ public sealed partial class Define {
             }
             string filePath = Path.Combine(outPath, fileName);
             File.WriteAllText(filePath, classStr, CsvConfig.encoding);
-            Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
+            Debug.Log("MakeDefine CSharp:" + fileCsv + "\nOutput:" + filePath);
         }
     }
 }

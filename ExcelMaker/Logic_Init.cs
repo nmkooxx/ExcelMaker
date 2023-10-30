@@ -69,7 +69,7 @@ public partial class Logic {
         else {
             m_Setting = new Setting();
         }
-        CsvConfig.classPostfix = m_Setting.classPostfix;
+        CsvConfig.classPostfix = m_Setting.csvClassPostfix;
     }
 
     public void WriteSetting() {
@@ -318,6 +318,9 @@ public partial class Logic {
             case ExportType.Json:
                 ExportJson(dirPath, sync, type);
                 break;
+            case ExportType.Lua:
+                ExportLua(dirPath, sync, type, codePath);
+                break;
             default:
                 break;
         }
@@ -351,7 +354,14 @@ public partial class Logic {
     private StringBuilder m_ErrorBuilder = new StringBuilder();
     private StringBuilder m_LogBuilder = new StringBuilder();
 
-    private bool ReadExcel(List<string> paths, char type, Action headAction, Action<char, IRow> rowAction) {
+    /// <summary>
+    /// 多语言配置按语言拆多个
+    /// </summary>
+    private StringBuilder[] m_LocalizeBuilders;
+    private string[] m_LocalizeNames;
+
+
+    private bool ReadExcel(List<string> paths, char type, Action headAction, Action<char, IRow> rowAction, Action finishAction) {
         bool result;
         for (int iPath = 0; iPath < paths.Count; iPath++) {
             m_FilePath = paths[iPath];
@@ -393,6 +403,9 @@ public partial class Logic {
 
                 m_ErrorIdBuilder.AppendLine("路径：" + m_FilePath);
                 result = ReadExcel(sheet, type, rowAction);
+                if (iPath == paths.Count - 1) {
+                    finishAction?.Invoke();
+                }
                 if (!result) {
                     Debug.LogError("ReadExcel Fail path:" + m_FilePath);
                     DOLogError();
@@ -659,8 +672,8 @@ public partial class Logic {
                 LogError("转换错误, index：" + index + " info:" + obj + " \n" + e);
                 //Debug.LogError(m_filePath + " 转换错误, index：" + index + " info:" + obj + " \n" + e);
             }
-        }        
-        
+        }
+
         return true;
     }
 

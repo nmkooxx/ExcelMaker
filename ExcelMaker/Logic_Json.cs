@@ -12,7 +12,7 @@ public partial class Logic {
         int slot = 0;
         string csvName = null, csvDir = null, path = null;
         List<string> paths = new List<string>(8);
-        m_LogBuilder.Append($"导出Json type:{type} sync:{sync}");
+        m_LogBuilder.AppendLine($"导出Json type:{type} sync:{sync}");
         foreach (var list in m_ExcelMap.Values) {
             var info = list[0];
             csvDir = info.folder;
@@ -51,7 +51,7 @@ public partial class Logic {
             foreach (var item in list) {
                 paths.Add(item.path);
             }
-            bool need = ReadExcel(paths, type, InitJson, RowToJson);
+            bool need = ReadExcel(paths, type, InitJson, RowToJson, FinishJson);
             if (!need) {
                 continue;
             }
@@ -142,6 +142,10 @@ public partial class Logic {
         m_JObject = new JObject();
     }
 
+    private void FinishJson() {
+        
+    }
+
     private void RowToJson(char type, IRow row) {
         object value;
         JToken token;
@@ -204,8 +208,7 @@ public partial class Logic {
                         }
                         else {
                             if (!IsEnum(cellType) && header.subs == null) {
-                                //Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                                Debug.LogError("格式错误, index：" + m_CurIndex + " header:" + header.name + " info:" + value);
+                                Debug.LogError($"Json格式错误 index:{m_CurIndex} header:{header.name}\n头:{frist} 尾:{last}\ninfo:{value}");
                             }
                         }
                         if (isJson) {
@@ -217,8 +220,7 @@ public partial class Logic {
                     }
                     else {
                         if (!IsEnum(cellType) && header.subs == null) {
-                            //Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                            LogError("格式错误, index：" + m_CurIndex + " header:" + header.name + " info:" + value);
+                            Debug.LogError($"格式错误 index:{m_CurIndex} header:{header.name}\ninfo:{value}");
                         }
                         token = JToken.FromObject(Convert.ToInt32(value));
                     }
@@ -273,8 +275,7 @@ public partial class Logic {
                 default:
                     info = value.ToString();
                     if (info.Length <= 0) {
-                        //Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                        LogError("格式错误, index：" + m_CurIndex + " header:" + header.name + " info:" + value);
+                        LogError("单元格类型错误 index：" + m_CurIndex + " header:" + header.name + " info:" + value);
                         continue;
                     }
                     if (cell.CellType == CellType.String) {
@@ -286,8 +287,7 @@ public partial class Logic {
                         }
                         else {
                             if (!IsEnum(cellType) && header.subs == null) {
-                                //Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
-                                Debug.LogError("格式错误, index：" + m_CurIndex + " header:" + header.name + " info:" + value);
+                                Debug.LogError($"Json格式错误 index:{m_CurIndex} header:{header.name}\n头:{frist} 尾:{last}\ninfo:{value}");
                             }
                         }
                         if (isJson) {
@@ -299,7 +299,6 @@ public partial class Logic {
                     }
                     else {
                         if (!IsEnum(cellType) && header.subs == null) {
-                            //Debug.LogError(m_filePath + " 格式错误, index：" + m_curIndex + " header:" + header.name + " info:" + value);
                             LogError("格式错误, index：" + m_CurIndex + " header:" + header.name + " info:" + value);
                         }
                         token = JToken.FromObject(Convert.ToInt32(value));

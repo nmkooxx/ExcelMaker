@@ -10,10 +10,10 @@ public partial class Logic {
     private void ExportCsv(string dirPath, bool sync, char type, string codePaths, bool exportCode) {
         string localPath;
         if (type == 'C') {
-            localPath = "client";
+            localPath = setting.clientPath;
         }
         else {
-            localPath = "server";
+            localPath = setting.serverPath;
         }
         if (!Directory.Exists(localPath)) {
             Directory.CreateDirectory(localPath);
@@ -76,7 +76,7 @@ public partial class Logic {
                 foreach (var item in list) {
                     paths.Clear();
                     paths.Add(item.path);
-                    need = ReadExcel(paths, type, InitCsv, RowToCsv);
+                    need = ReadExcel(paths, type, InitCsv, RowToCsv, FinishCsv);
                     if (!need) {
                         continue;
                     }
@@ -110,7 +110,7 @@ public partial class Logic {
             foreach (var item in list) {
                 paths.Add(item.path);
             }            
-            need = ReadExcel(paths, type, InitCsv, RowToCsv);
+            need = ReadExcel(paths, type, InitCsv, RowToCsv, FinishCsv);
             if (!need) {
                 continue;
             }
@@ -166,6 +166,7 @@ public partial class Logic {
                         CsvMaker_TypeScript.MakeCsvClass(codePaths, csvName, m_Headers, m_RawTypes, headExtend, csvExtend, readerExtend);
                         break;
                     default:
+                        Debug.LogError($"ExportCode 导出语言未支持:{s_ExportLanguage}");
                         break;
                 }
             }
@@ -186,6 +187,7 @@ public partial class Logic {
                             CsvMaker_TypeScript.MakeCsvDefine(codePath, m_DefineName);
                             break;
                         default:
+                            Debug.LogError($"DefineIndex 导出语言未支持:{s_ExportLanguage}");
                             break;
                     }
                 }
@@ -201,32 +203,6 @@ public partial class Logic {
             }
         }
         Debug.Log(m_LogBuilder.ToString());
-
-//         if (m_LocalizeKeys.Count > 0) {
-//             StringBuilder keyBuilder = new StringBuilder();
-//             foreach (var item in m_LocalizeKeys) {
-//                 keyBuilder.Append(item.Key);
-//                 keyBuilder.Append(CsvConfig.delimiter);
-//                 keyBuilder.AppendLine(item.Value);
-//             }
-//             string keyPath = "LocalizeKey.txt";
-//             File.WriteAllText(keyPath, keyBuilder.ToString());
-//         }
-
-//         if (m_PathKeys.Count > 0) {
-//             StringBuilder keyBuilder = new StringBuilder();
-//             keyBuilder.AppendLine("id,value");
-//             foreach (var item in m_PathKeys) {
-//                 keyBuilder.Append(item.Key);
-//                 keyBuilder.Append(CsvConfig.delimiter);
-//                 keyBuilder.AppendLine(item.Value);
-//             }
-//             string text = keyBuilder.ToString();
-//             path = dirPath + "/PathKey.csv";
-//             localCsvPath = localPath + "/PathKey.csv";
-//             File.WriteAllText(path, text);
-//             File.WriteAllText(localCsvPath, text);
-//         }
     }
 
     /// <summary>
@@ -256,9 +232,9 @@ public partial class Logic {
     private object m_LocalizeId;
     private Dictionary<string, string>[] m_LocalizeReplaces;
     private const string kLocalizeRefTag = "[id=";
-    private string PackLocalizeString(string rawString, bool force, int slot) {
+    private string PackLocalizeString(string rawString, bool force, int slot, out bool needParse) {
         string newString = rawString;
-        if (force || rawString.IndexOf(CsvConfig.delimiter) > 0) {
+        if (force || rawString.IndexOf(CsvConfig.delimiter) > 0/* || rawString.IndexOf(' ') > 0*/) {
             //引号要替换成双引号
             newString = newString.Replace("\"", "\"\"");
             //出现逗号分隔符，需要包裹
@@ -305,21 +281,16 @@ public partial class Logic {
         || newString.IndexOf("\t") > 0
         || newString.IndexOf("\\") > 0
         ) {
-            newString += ",1";
+            needParse = true;
         }
         else {
-            newString += ",";
+            needParse = false;
         }
 
         return newString;
     }
 
     private StringBuilder m_CsvBuilder;
-    /// <summary>
-    /// 多语言配置按语言拆多个
-    /// </summary>
-    private StringBuilder[] m_LocalizeBuilders;
-    private string[] m_LocalizeNames;
     private void InitCsv() {
         switch (s_ExportLanguage) {
             case ExportLanguage.CSharp:
@@ -332,6 +303,7 @@ public partial class Logic {
                 CsvMaker_TypeScript.InitCsvDefine();
                 break;
             default:
+                Debug.LogError($"InitCsv 导出语言未支持:{s_ExportLanguage}");
                 break;
         }
 
@@ -381,6 +353,12 @@ public partial class Logic {
         //         m_csvBuilder.Append("\n");
     }
 
+    private void FinishCsv() {
+        
+    }
+
+    private string kNeedParseStr = CsvConfig.delimiter + "1" + CsvConfig.delimiter;
+    private string kNoParseStr = CsvConfig.delimiter + CsvConfig.delimiter;
     private void RowToCsv(char type, IRow row) {
         object value;
         string cellType;
@@ -414,7 +392,7 @@ public partial class Logic {
                 return;
             }
 
-            bool isSimple = CheckSimpleFormat(cellType, value, header, rank);
+            bool isSimple = CsvCheckSimpleFormat(cellType, value, header, rank);
             if (!isSimple) {
                 //对象结构需要引号包起来
                 info = value.ToString();
@@ -451,6 +429,7 @@ public partial class Logic {
                 csvBuilder.Append(CsvConfig.delimiter);
             }
 
+            bool needParse = false;
             for (int rank = 1; rank < m_Headers.Count; rank++) {
                 var csvBuilder = m_LocalizeBuilders[rank -1];
 
@@ -465,7 +444,8 @@ public partial class Logic {
                     continue;
                 }
 
-                csvBuilder.AppendLine(PackLocalizeString(value.ToString(), false, rank - 1));
+                csvBuilder.AppendLine(PackLocalizeString(value.ToString(), false, rank - 1, out needParse));
+                csvBuilder.AppendLine(needParse ? kNeedParseStr : kNoParseStr);
             }
 
             return;
@@ -512,7 +492,7 @@ public partial class Logic {
                 }
             }
 
-            bool isSimple = CheckSimpleFormat(cellType, value, header, rank);
+            bool isSimple = CsvCheckSimpleFormat(cellType, value, header, rank);
             if (!isSimple) {
                 //对象结构需要引号包起来
                 info = value.ToString();
@@ -534,10 +514,10 @@ public partial class Logic {
         }
         m_CsvBuilder.Append("\n");
 
-        RowToDefine(row);
+        RowToCsvDefine(row);
     }
 
-    private void RowToDefine(IRow row) {
+    private void RowToCsvDefine(IRow row) {
         if (m_DefineIndex <= 0) {
             return;
         }
@@ -562,11 +542,12 @@ public partial class Logic {
                 CsvMaker_TypeScript.AddCsvDefine(valueType, value, GetCellValue(row.GetCell(0)));
                 break;
             default:
+                Debug.LogError($"ExportCode 导出语言未支持:{s_ExportLanguage}");
                 break;
         }
     }
 
-    private bool CheckSimpleFormat(string cellType, object value, CsvHeader header, int slot) {
+    private bool CsvCheckSimpleFormat(string cellType, object value, CsvHeader header, int slot) {
         string key;
         string str;
         switch (cellType.ToLower()) {

@@ -51,6 +51,8 @@ partial class MainForm {
             this.check_keep = new System.Windows.Forms.CheckBox();
             this.label1 = new System.Windows.Forms.Label();
             this.input_search = new System.Windows.Forms.TextBox();
+            this.radio_clientExportType_3 = new System.Windows.Forms.RadioButton();
+            this.radio_serverExportType_3 = new System.Windows.Forms.RadioButton();
             this.group_serverExportType.SuspendLayout();
             this.group_clientExportType.SuspendLayout();
             this.SuspendLayout();
@@ -179,6 +181,7 @@ partial class MainForm {
             // 
             // group_serverExportType
             // 
+            this.group_serverExportType.Controls.Add(this.radio_serverExportType_3);
             this.group_serverExportType.Controls.Add(this.radio_serverExportType_1);
             this.group_serverExportType.Controls.Add(this.radio_serverExportType_2);
             this.group_serverExportType.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
@@ -192,7 +195,7 @@ partial class MainForm {
             // radio_serverExportType_1
             // 
             this.radio_serverExportType_1.AutoSize = true;
-            this.radio_serverExportType_1.Location = new System.Drawing.Point(33, 11);
+            this.radio_serverExportType_1.Location = new System.Drawing.Point(33, 14);
             this.radio_serverExportType_1.Name = "radio_serverExportType_1";
             this.radio_serverExportType_1.Size = new System.Drawing.Size(41, 16);
             this.radio_serverExportType_1.TabIndex = 0;
@@ -204,7 +207,7 @@ partial class MainForm {
             // radio_serverExportType_2
             // 
             this.radio_serverExportType_2.AutoSize = true;
-            this.radio_serverExportType_2.Location = new System.Drawing.Point(98, 11);
+            this.radio_serverExportType_2.Location = new System.Drawing.Point(85, 14);
             this.radio_serverExportType_2.Name = "radio_serverExportType_2";
             this.radio_serverExportType_2.Size = new System.Drawing.Size(47, 16);
             this.radio_serverExportType_2.TabIndex = 1;
@@ -213,8 +216,21 @@ partial class MainForm {
             this.radio_serverExportType_2.UseVisualStyleBackColor = true;
             this.radio_serverExportType_2.CheckedChanged += new System.EventHandler(this.radio_serverExportType_CheckedChanged);
             // 
+            // radio_serverExportType_3
+            // 
+            this.radio_serverExportType_3.AutoSize = true;
+            this.radio_serverExportType_3.Location = new System.Drawing.Point(144, 14);
+            this.radio_serverExportType_3.Name = "radio_serverExportType_3";
+            this.radio_serverExportType_3.Size = new System.Drawing.Size(41, 16);
+            this.radio_serverExportType_3.TabIndex = 2;
+            this.radio_serverExportType_3.TabStop = true;
+            this.radio_serverExportType_3.Text = "lua";
+            this.radio_serverExportType_3.UseVisualStyleBackColor = true;
+            this.radio_serverExportType_3.CheckedChanged += new System.EventHandler(this.radio_serverExportType_CheckedChanged);
+            // 
             // group_clientExportType
             // 
+            this.group_clientExportType.Controls.Add(this.radio_clientExportType_3);
             this.group_clientExportType.Controls.Add(this.radio_clientExportType_1);
             this.group_clientExportType.Controls.Add(this.radio_clientExportType_2);
             this.group_clientExportType.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
@@ -228,7 +244,7 @@ partial class MainForm {
             // radio_clientExportType_1
             // 
             this.radio_clientExportType_1.AutoSize = true;
-            this.radio_clientExportType_1.Location = new System.Drawing.Point(33, 11);
+            this.radio_clientExportType_1.Location = new System.Drawing.Point(33, 14);
             this.radio_clientExportType_1.Name = "radio_clientExportType_1";
             this.radio_clientExportType_1.Size = new System.Drawing.Size(41, 16);
             this.radio_clientExportType_1.TabIndex = 0;
@@ -240,7 +256,7 @@ partial class MainForm {
             // radio_clientExportType_2
             // 
             this.radio_clientExportType_2.AutoSize = true;
-            this.radio_clientExportType_2.Location = new System.Drawing.Point(98, 11);
+            this.radio_clientExportType_2.Location = new System.Drawing.Point(85, 14);
             this.radio_clientExportType_2.Name = "radio_clientExportType_2";
             this.radio_clientExportType_2.Size = new System.Drawing.Size(47, 16);
             this.radio_clientExportType_2.TabIndex = 1;
@@ -248,6 +264,18 @@ partial class MainForm {
             this.radio_clientExportType_2.Text = "json";
             this.radio_clientExportType_2.UseVisualStyleBackColor = true;
             this.radio_clientExportType_2.CheckedChanged += new System.EventHandler(this.radio_clientExportType_CheckedChanged);
+            // 
+            // radio_clientExportType_3
+            // 
+            this.radio_clientExportType_3.AutoSize = true;
+            this.radio_clientExportType_3.Location = new System.Drawing.Point(144, 14);
+            this.radio_clientExportType_3.Name = "radio_clientExportType_3";
+            this.radio_clientExportType_3.Size = new System.Drawing.Size(41, 16);
+            this.radio_clientExportType_3.TabIndex = 2;
+            this.radio_clientExportType_3.TabStop = true;
+            this.radio_clientExportType_3.Text = "lua";
+            this.radio_clientExportType_3.UseVisualStyleBackColor = true;
+            this.radio_clientExportType_3.CheckedChanged += new System.EventHandler(this.radio_clientExportType_CheckedChanged);
             // 
             // btn_clearLog
             // 
@@ -414,5 +442,7 @@ partial class MainForm {
     private System.Windows.Forms.CheckBox check_keep;
     private System.Windows.Forms.Label label1;
     private System.Windows.Forms.TextBox input_search;
+    private System.Windows.Forms.RadioButton radio_serverExportType_3;
+    private System.Windows.Forms.RadioButton radio_clientExportType_3;
 }
 

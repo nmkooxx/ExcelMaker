@@ -7,12 +7,13 @@ using System.Threading.Tasks;
 public enum ExportType {
     Csv,
     Json,
+    Lua,
 }
 
 public enum ExportLanguage {
     CSharp,
     Java,
-    TypeScript,
+    TypeScript
 }
 
 public class Config {
@@ -44,8 +45,12 @@ public class Combine {
 public class Setting {
     public int serverExportType = 1;
     public int serverLanguage = 1;
+    public string serverPath = "Export/Server";
     public int clientExportType;
     public int clientLanguage = 0;
+    public string clientPath = "Export/Client";
+
+    public string csvClassPostfix = "Cfg";
 
     /// <summary>
     /// 是否导出文件夹
@@ -53,8 +58,6 @@ public class Setting {
     public bool exportDir = true;
 
     public Combine[] combines;
-
-    public string classPostfix = "Cfg";
 
     /// <summary>
     /// 稀疏表名称

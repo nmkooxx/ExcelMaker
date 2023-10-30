@@ -34,11 +34,9 @@ namespace CsvHelper {
 
                     break;
                 case eFieldType.Array:
-                    //arrayInfos = new List<CsvNode>(3);
                     arrayInfos = m_ListPool.Pop();
                     break;
                 case eFieldType.Class:
-                    //classInfos = new Dictionary<string, CsvNode>(3);
                     classInfos = m_DictPool.Pop();
                     break;
                 default:
@@ -76,6 +74,11 @@ namespace CsvHelper {
                         nextHeader = header.subs[layer + 1];
                         subNode = Pop(nextHeader.name, nextHeader.type);
                         arrayInfos.Add(subNode);
+                        //之前的数据可能是0，被忽略了，需要补上
+                        for (int num = arrayInfos.Count; num <= subHeader.index; num++) {
+                            subNode = Pop(nextHeader.name, nextHeader.type);
+                            arrayInfos.Add(subNode);
+                        }
                     } else {
                         subNode = arrayInfos[subHeader.index];
                     }
