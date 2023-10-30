@@ -154,8 +154,6 @@ public class @className {
         return m_type2Headers.TryGetValue(type, out header);
     }
 
-    private static readonly Encoding m_Encoding = new UTF8Encoding(false);
-
     public static void MakeCsvClass(string outPaths, string fileCsv,
     List<CsvHeader> headers, List<string> typeStrs) {
         string classStr = TemplateClass;
@@ -285,13 +283,13 @@ public class @className {
                 Directory.CreateDirectory(outPath);
             }
             string filePath = Path.Combine(outPath, fileName);
-            File.WriteAllText(filePath, classStr, m_Encoding);
+            File.WriteAllText(filePath, classStr, CsvConfig.encoding);
             Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
 
             string raderClassStr = TemplateReader.Replace("@classname", fileCsvUpper).Replace("@classcsv", className).Replace("@classKey", classKey);
             string readerFileName = fileCsvUpper + "Reader" + mSuffixName;
             string readerFilePath = Path.Combine(outPath, readerFileName);
-            File.WriteAllText(readerFilePath, raderClassStr, m_Encoding);
+            File.WriteAllText(readerFilePath, raderClassStr, CsvConfig.encoding);
         }
     }
 
@@ -328,6 +326,6 @@ public class @className {
         string defineClassStr = TemplateDefineClass.Replace("@className", className)
             .Replace("#property#", m_defineBuilder.ToString());
         defineClassStr = Regex.Replace(defineClassStr, "(?<!\r)\n|\r\n", "\n");
-        File.WriteAllText(definePath, defineClassStr, m_Encoding);
+        File.WriteAllText(definePath, defineClassStr, CsvConfig.encoding);
     }
 }

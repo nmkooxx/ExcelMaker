@@ -15,9 +15,9 @@ public partial class MainForm : Form {
     public MainForm() {
 		InitializeComponent();
         Debug.Init(panel_log);
-        m_Logic = new Logic();
-        initUI();
-        m_Logic.Scan(excelList);
+        m_Logic = new Logic(excelList);
+        InitUI();
+        m_Logic.Scan(string.Empty, config.selectNames);
         excelList.ItemCheck += excelList_ItemCheck;
     }
 
@@ -33,7 +33,7 @@ public partial class MainForm : Form {
         }
     }
 
-    private void initUI() {
+    private void InitUI() {
         foreach (var item in group_serverExportType.Controls) {
             var radioButton = item as RadioButton;
             if (radioButton.TabIndex == setting.serverExportType) {
@@ -55,10 +55,12 @@ public partial class MainForm : Form {
         input_serverCode.Text = config.serverCodePath;
         input_client.Text = config.clientPath;
         input_clientCode.Text = config.clientCodePath;
+
+        this.Size = new Size(config.width, config.height);
     }
 
     private void btn_scan_Click(object sender, EventArgs e) {
-        m_Logic.Scan(excelList);
+        m_Logic.Scan(input_search.Text, config.selectNames);
 	}
 
     private void btn_exportServer_Click(object sender, EventArgs e) {
@@ -158,6 +160,12 @@ public partial class MainForm : Form {
             return;
         }
         excelInfo.selected = selected;
+        if (selected) {
+            config.selectNames.Add(excelInfo.key);
+        }
+        else {
+            config.selectNames.Remove(excelInfo.key);
+        }
 
         var list = m_Logic.excelMap[excelInfo.id];
         if (list.Count > 1) {
@@ -167,10 +175,17 @@ public partial class MainForm : Form {
                     continue;
                 }
                 other.selected = selected;
+                if (selected) {
+                    config.selectNames.Add(other.key);
+                }
+                else {
+                    config.selectNames.Remove(other.key);
+                }
 
                 excelList.SetItemChecked(other.index, selected);
             }
         }
+        m_Logic.WriteConfig();
 
         //Debug.Log($"excelList_ItemCheck sender:{sender} cnt:{list.Count} e:{e}");
     }
@@ -195,5 +210,29 @@ public partial class MainForm : Form {
 
     private void btn_clearLog_Click(object sender, EventArgs e) {
         Debug.Clear();
+    }
+
+    private void input_search_TextChanged(object sender, EventArgs e) {
+        m_Logic.Scan(input_search.Text, config.selectNames);
+    }
+
+    protected override void OnSizeChanged(EventArgs e) {
+        //修改Excel 列表大小
+        excelList.Width = this.Width - excelList.Location.X - panel_log.Width - 8;
+        excelList.Height = this.Height - excelList.Location.Y - 32;
+
+        panel_log.Location = new Point(this.Width - panel_log.Width - 2, panel_log.Location.Y);
+
+        btn_clearLog.Location = new Point(panel_log.Location.X, btn_clearLog.Location.Y);
+
+        if (m_Logic == null) {
+            return;
+        }
+        if (config.width != this.Width || config.height != this.Height) {
+            //Debug.Log($"OnSizeChanged width:{this.Width} -> {config.width} width:{this.Height} -> {config.height}");
+            config.width = this.Width;
+            config.height = this.Height;
+            m_Logic.WriteConfig();
+        }
     }
 }

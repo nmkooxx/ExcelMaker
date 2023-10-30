@@ -16,46 +16,46 @@ namespace CsvHelper {
         /// <summary>
         /// 忽略标志
         /// </summary>
-        static char m_skipFlag = '#';
+        static char m_SkipFlag = '#';
         public static char skipFlag {
-            get { return m_skipFlag; }
-            set { m_skipFlag = value; }
+            get { return m_SkipFlag; }
+            set { m_SkipFlag = value; }
         }
 
 #if UseParseFlag
         /// <summary>
         /// 需要解析标志
         /// </summary>
-        static char m_parseFlag = '*';
+        static char m_ParseFlag = '*';
         public static char parseFlag
         {
-            get { return m_parseFlag; }
-            set { m_parseFlag = value; }
+            get { return m_ParseFlag; }
+            set { m_ParseFlag = value; }
         }
 #endif
 
         /// <summary>
         /// 类分隔符
         /// </summary>
-        static char m_classSeparator = '.';
+        static char m_ClassSeparator = '.';
         public static char classSeparator {
-            get { return m_classSeparator; }
-            set { m_classSeparator = value; }
+            get { return m_ClassSeparator; }
+            set { m_ClassSeparator = value; }
         }
 
         /// <summary>
         /// 数组分隔符
         /// </summary>
-        static char m_arraySeparator = '_';
+        static char m_ArraySeparator = '_';
         public static char arraySeparator {
-            get { return m_arraySeparator; }
-            set { m_arraySeparator = value; }
+            get { return m_ArraySeparator; }
+            set { m_ArraySeparator = value; }
         }
 
-        static char[] m_arrayChars = new[] { '[', ']' };
+        static char[] m_ArrayChars = new[] { '[', ']' };
         public static char[] arrayChars {
-            get { return m_arrayChars; }
-            set { m_arrayChars = value; }
+            get { return m_ArrayChars; }
+            set { m_ArrayChars = value; }
         }
 
         /// <summary>
@@ -70,121 +70,63 @@ namespace CsvHelper {
         /// <summary>
         /// 小数位数
         /// </summary>
-        static int m_digits = 2;
+        static int m_Digits = 2;
         public static int digits {
-            get { return m_digits; }
-            set { m_digits = value; }
+            get { return m_Digits; }
+            set { m_Digits = value; }
         }
 
         /// <summary>
         /// 读取转换缓冲大小
         /// </summary>
-        static int m_bufferSize = 2048;
+        static int m_BufferSize = 2048;
         public static int bufferSize {
-            get { return m_bufferSize; }
-            set { m_bufferSize = value; }
+            get { return m_BufferSize; }
+            set { m_BufferSize = value; }
         }
 
-        static bool m_throwOnBadData = false;
+        static bool m_ThrowOnBadData = false;
         public static bool throwOnBadData {
-            get { return m_throwOnBadData; }
-            set { m_throwOnBadData = value; }
+            get { return m_ThrowOnBadData; }
+            set { m_ThrowOnBadData = value; }
         }
 
         public static bool countBytes { get; set; }
 
-        static Encoding m_encoding = Encoding.UTF8;
+        //static Encoding m_Encoding = Encoding.UTF8;
+        static Encoding m_Encoding = new UTF8Encoding(false);
         public static Encoding encoding {
-            get { return m_encoding; }
-            set { m_encoding = value; }
+            get { return m_Encoding; }
+            set { m_Encoding = value; }
         }
 
-        static char m_quote = '"';
+        static char m_Quote = '"';
         static string m_quoteString = "\"";
-        static string m_doubleQuoteString = "\"\"";
-        static char[] m_quoteRequiredChars = new[] { '\r', '\n' };
-
         public static char quote {
-            get { return m_quote; }
+            get { return m_Quote; }
             set {
-//                 if (value == '\n') {
-//                     Debug.LogError("Newline is not a valid quote.");
-//                 }
-// 
-//                 if (value == '\r') {
-//                     Debug.LogError("Carriage return is not a valid quote.");
-//                 }
-// 
-//                 if (value == '\0') {
-//                     Debug.LogError("Null is not a valid quote.");
-//                 }
-// 
-//                 if (Convert.ToString(value) == m_delimiter) {
-//                     Debug.LogError("You can not use the delimiter as a quote.");
-//                 }
-
-                m_quote = value;
+                m_Quote = value;
 
                 m_quoteString = Convert.ToString(value);
-                m_doubleQuoteString = m_quoteString + m_quoteString;
             }
         }
 
-        public static string quoteString {
-            get { return m_quoteString; }
-        }
-
-        /// <summary>
-        /// 用于写回文本时替换单引号
-        /// </summary>
-        public static string doubleQuoteString {
-            get { return m_doubleQuoteString; }
-        }
-
-        public static char[] quoteRequiredChars {
-            get { return m_quoteRequiredChars; }
-        }
-
-        static bool m_ignoreQuotes = false;
+        static bool m_IgnoreQuotes = false;
         public static bool ignoreQuotes {
-            get { return m_ignoreQuotes; }
-            set { m_ignoreQuotes = value; }
+            get { return m_IgnoreQuotes; }
+            set { m_IgnoreQuotes = value; }
         }
 
-        static string m_delimiter = ",";
+        static string m_Delimiter = ",";
         /// <summary>
         /// Gets or sets the delimiter used to separate fields.
         /// Default is ',';
         /// </summary>
         public static string delimiter {
-            get { return m_delimiter; }
+            get { return m_Delimiter; }
             set {
-//                 if (value == "\n") {
-//                     Debug.LogError("Newline is not a valid delimiter.");
-//                 }
-// 
-//                 if (value == "\r") {
-//                     Debug.LogError("Carriage return is not a valid delimiter.");
-//                 }
-// 
-//                 if (value == "\0") {
-//                     Debug.LogError("Null is not a valid delimiter.");
-//                 }
-// 
-//                 if (value == Convert.ToString(m_quote)) {
-//                     Debug.LogError("You can not use the quote as a delimiter.");
-//                 }
-
-                m_delimiter = value;
-
-                BuildRequiredQuoteChars();
+                m_Delimiter = value;
             }
-        }
-
-        private static void BuildRequiredQuoteChars() {
-            m_quoteRequiredChars = m_delimiter.Length > 1 ?
-                new[] { '\r', '\n' } :
-                new[] { '\r', '\n', m_delimiter[0] };
         }
 
         /// <summary>
@@ -202,16 +144,16 @@ namespace CsvHelper {
         /// <summary>
         /// 忽略空白行
         /// </summary>
-        static bool m_ignoreBlankLines = true;
+        static bool m_IgnoreBlankLines = true;
         public static bool ignoreBlankLines {
-            get { return m_ignoreBlankLines; }
-            set { m_ignoreBlankLines = value; }
+            get { return m_IgnoreBlankLines; }
+            set { m_IgnoreBlankLines = value; }
         }
 
-        static char m_comment = '#';
+        static char m_Comment = '#';
         public static char comment {
-            get { return m_comment; }
-            set { m_comment = value; }
+            get { return m_Comment; }
+            set { m_Comment = value; }
         }
 
         /// <summary>
@@ -222,10 +164,10 @@ namespace CsvHelper {
         /// <summary>
         /// 检查重复行
         /// </summary>
-        static bool m_checkRepeatLines = false;
+        static bool m_CheckRepeatLines = false;
         public static bool checkRepeatLines {
-            get { return m_checkRepeatLines; }
-            set { m_checkRepeatLines = value; }
+            get { return m_CheckRepeatLines; }
+            set { m_CheckRepeatLines = value; }
         }
 
     }

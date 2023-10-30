@@ -145,25 +145,23 @@ export class @classNameCsvReader extends CsvHelper.CsvReader<@classNameCsv> {
         return retTypeName;
     }
 
-    private static Dictionary<string, Header> m_type2Headers;
+    private static Dictionary<string, Header> m_Type2Headers;
     public static bool TryGetHeader(string type, out Header header) {
-        if (m_type2Headers == null) {
-            m_type2Headers = new Dictionary<string, Header>();
+        if (m_Type2Headers == null) {
+            m_Type2Headers = new Dictionary<string, Header>();
             string filePath = "ExcelMakerExtend/TypeScript/Type2Head.json";
             if (File.Exists(filePath)) {
                 var text = File.ReadAllText(filePath);
                 var headers = JsonConvert.DeserializeObject<Header[]>(text);
                 for (int i = 0; i < headers.Length; i++) {
                     var item = headers[i];
-                    m_type2Headers[item.name] = item;
-                    m_type2Headers[item.name.ToLower()] = item;
+                    m_Type2Headers[item.name] = item;
+                    m_Type2Headers[item.name.ToLower()] = item;
                 }
             }
         }
-        return m_type2Headers.TryGetValue(type, out header);
+        return m_Type2Headers.TryGetValue(type, out header);
     }
-
-    private static readonly Encoding m_Encoding = new UTF8Encoding(false);
 
     public static void MakeCsvClass(string outPaths, string fileCsv,
         List<CsvHeader> headers, List<string> typeStrs,
@@ -311,14 +309,14 @@ export class @classNameCsvReader extends CsvHelper.CsvReader<@classNameCsv> {
                 Directory.CreateDirectory(outPath);
             }
             string filePath = Path.Combine(outPath, fileName);
-            File.WriteAllText(filePath, classStr, m_Encoding);
+            File.WriteAllText(filePath, classStr, CsvConfig.encoding);
             Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
         }
     }
 
-    private static StringBuilder m_defineBuilder;
+    private static StringBuilder m_DefineBuilder;
     public static void InitCsvDefine() {
-        m_defineBuilder = new StringBuilder();
+        m_DefineBuilder = new StringBuilder();
     }
 
     public static void AddCsvDefine(string valueType, object value, object cellValue) {
@@ -330,18 +328,18 @@ export class @classNameCsvReader extends CsvHelper.CsvReader<@classNameCsv> {
         else {
             template = template.Replace("@value", cellValue.ToString());
         }
-        m_defineBuilder.Append(template);
+        m_DefineBuilder.Append(template);
     }
 
     public static void MakeCsvDefine(string codePath, string className) {
-        if (m_defineBuilder.Length <= 0) {
+        if (m_DefineBuilder.Length <= 0) {
             return;
         }
         string definePath = Path.Combine(codePath, className + ".ts");
         string defineClassStr = TemplateDefineClass.Replace("@className", className)
-            .Replace("#property#", m_defineBuilder.ToString());
+            .Replace("#property#", m_DefineBuilder.ToString());
         defineClassStr = Regex.Replace(defineClassStr, "(?<!\r)\n|\r\n", "\n");
-        File.WriteAllText(definePath, defineClassStr, m_Encoding);
+        File.WriteAllText(definePath, defineClassStr, CsvConfig.encoding);
     }
 
     static string TemplateCatalog;
@@ -358,11 +356,11 @@ export class @classNameCsvReader extends CsvHelper.CsvReader<@classNameCsv> {
     }";
 
 
-    private static StringBuilder m_catalogImportBuilder;
-    private static StringBuilder m_catalogPropertyBuilder;
+    private static StringBuilder m_CatalogImportBuilder;
+    private static StringBuilder m_CatalogPropertyBuilder;
     public static void InitCatalog() {
-        m_catalogImportBuilder = new StringBuilder();
-        m_catalogPropertyBuilder = new StringBuilder();
+        m_CatalogImportBuilder = new StringBuilder();
+        m_CatalogPropertyBuilder = new StringBuilder();
         if (string.IsNullOrEmpty(TemplateCatalog)) {
             string filePath = "ExcelMakerExtend/TypeScript/TemplateCatalog.ts";
             if (File.Exists(filePath)) {
@@ -410,17 +408,17 @@ export const Csv = new _Csv();";
 
     public static void AddCatalog(string className) {
         string template = TemplateCatalogImprot.Replace("@className", className);
-        m_catalogImportBuilder.Append(template);
+        m_CatalogImportBuilder.Append(template);
 
         template = TemplateCatalogProperty.Replace("@TypeName", className);
-        m_catalogPropertyBuilder.Append(template);
+        m_CatalogPropertyBuilder.Append(template);
     }
 
     public static void MakeCatalog(string codePath) {
         string definePath = Path.Combine(codePath, "Csv.ts");
-        string defineClassStr = TemplateCatalog.Replace("@Import", m_catalogImportBuilder.ToString())
-            .Replace("@Property", m_catalogPropertyBuilder.ToString());
+        string defineClassStr = TemplateCatalog.Replace("@Import", m_CatalogImportBuilder.ToString())
+            .Replace("@Property", m_CatalogPropertyBuilder.ToString());
         defineClassStr = Regex.Replace(defineClassStr, "(?<!\r)\n|\r\n", "\n");
-        File.WriteAllText(definePath, defineClassStr, m_Encoding);
+        File.WriteAllText(definePath, defineClassStr, CsvConfig.encoding);
     }
 }

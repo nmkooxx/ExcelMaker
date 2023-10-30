@@ -187,22 +187,22 @@ public sealed partial class Define {
         return retTypeName;
     }
 
-    private static Dictionary<string, Header> m_type2Headers;
+    private static Dictionary<string, Header> m_Type2Headers;
     public static bool TryGetHeader(string type, out Header header) {
-        if (m_type2Headers == null) {
-            m_type2Headers = new Dictionary<string, Header>();
+        if (m_Type2Headers == null) {
+            m_Type2Headers = new Dictionary<string, Header>();
             string filePath = "ExcelMakerExtend/CSharp/Type2Head.json";
             if (File.Exists(filePath)) {
                 var text = File.ReadAllText(filePath);
                 var headers = JsonConvert.DeserializeObject<Header[]>(text);
                 for (int i = 0; i < headers.Length; i++) {
                     var item = headers[i];
-                    m_type2Headers[item.name] = item;
-                    m_type2Headers[item.name.ToLower()] = item;
+                    m_Type2Headers[item.name] = item;
+                    m_Type2Headers[item.name.ToLower()] = item;
                 }
             }
         }
-        return m_type2Headers.TryGetValue(type, out header);
+        return m_Type2Headers.TryGetValue(type, out header);
     }
 
     private enum PropertyType {
@@ -211,8 +211,6 @@ public sealed partial class Define {
         PathKey,
         LocalizeKey,
     }
-
-    private static readonly Encoding m_Encoding = new UTF8Encoding(false);
 
     public static void MakeClass(string outPaths, string fileCsv,
         List<CsvHeader> headers, List<string> typeStrs) {
@@ -411,7 +409,7 @@ public sealed partial class Define {
                 Directory.CreateDirectory(outPath);
             }
             string filePath = Path.Combine(outPath, fileName);
-            File.WriteAllText(filePath, classStr, m_Encoding);
+            File.WriteAllText(filePath, classStr, CsvConfig.encoding);
             Debug.Log("MakeCsv:" + fileCsv + "\nOutput:" + filePath);
         }
     }

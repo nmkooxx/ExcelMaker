@@ -78,13 +78,15 @@
     <Compile Include="DefineMaker_CSharp.cs" />
     <Compile Include="ExcelReader.cs" />
     <Compile Include="Debug.cs" />
+    <Compile Include="Logic_Json.cs" />
+    <Compile Include="Logic _Csv.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Logic.cs" />
+    <Compile Include="Logic_Init.cs" />
     <Compile Include="ObjectPool.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

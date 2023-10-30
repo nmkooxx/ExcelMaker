@@ -35,11 +35,11 @@ namespace CsvHelper {
                     break;
                 case eFieldType.Array:
                     //arrayInfos = new List<CsvNode>(3);
-                    arrayInfos = m_listPool.Pop();
+                    arrayInfos = m_ListPool.Pop();
                     break;
                 case eFieldType.Class:
                     //classInfos = new Dictionary<string, CsvNode>(3);
-                    classInfos = m_dictPool.Pop();
+                    classInfos = m_DictPool.Pop();
                     break;
                 default:
                     Debug.LogError("CsvNode unsupport type:" + type);
@@ -123,7 +123,7 @@ namespace CsvHelper {
                     Push(item);
                 }
                 arrayInfos.Clear();
-                m_listPool.Push(arrayInfos);
+                m_ListPool.Push(arrayInfos);
                 arrayInfos = null;
             }
             if (classInfos != null) {
@@ -131,7 +131,7 @@ namespace CsvHelper {
                     Push(item);
                 }
                 classInfos.Clear();
-                m_dictPool.Push(classInfos);
+                m_DictPool.Push(classInfos);
                 classInfos = null;
             }
         }
@@ -182,11 +182,11 @@ namespace CsvHelper {
         #endregion reader
 
         #region pool
-        private static ObjectPool<List<CsvNode>> m_listPool = new ObjectPool<List<CsvNode>>();
-        private static ObjectPool<Dictionary<string, CsvNode>> m_dictPool = new ObjectPool<Dictionary<string, CsvNode>>();
-        private static ObjectPool<CsvNode> m_pool = new ObjectPool<CsvNode>();
+        private static ObjectPool<List<CsvNode>> m_ListPool = new ObjectPool<List<CsvNode>>();
+        private static ObjectPool<Dictionary<string, CsvNode>> m_DictPool = new ObjectPool<Dictionary<string, CsvNode>>();
+        private static ObjectPool<CsvNode> m_Pool = new ObjectPool<CsvNode>();
         public static CsvNode Pop(string title, eFieldType type) {
-            CsvNode node = m_pool.Pop();
+            CsvNode node = m_Pool.Pop();
             node.Init(title, type);
             node.frist = true;
             return node;
@@ -194,11 +194,11 @@ namespace CsvHelper {
 
         public static void Push(CsvNode node) {
             node.Clear();
-            m_pool.Push(node);
+            m_Pool.Push(node);
         }
 
         public static void ClearPool() {
-            m_pool.Clear();
+            m_Pool.Clear();
         }
         #endregion pool
 

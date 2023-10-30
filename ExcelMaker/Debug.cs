@@ -10,87 +10,99 @@ using System.Windows.Forms;
 public static class Debug {
     const int kLogMax = 90;
     const int kLogSpace = 10;
-    private static Size m_logMaxSize;
-    private static Queue<Label> m_logLabels;
-    private static Panel m_panel;
-    private static StreamWriter m_streamWriter;
+    private static Size m_LogMaxSize;
+    private static Queue<Label> m_LogLabels;
+    private static Panel m_Panel;
+    private static StreamWriter m_StreamWriter;
     public static void Init(Panel panel) {
-        if (m_panel != null) {
+        if (m_Panel != null) {
             return;
         }
-        m_panel = panel;
-        m_logLabels = new Queue<Label>(kLogMax);
+        m_Panel = panel;
+        m_LogLabels = new Queue<Label>(kLogMax);
         //日志宽度需要减去滚动条
-        m_logMaxSize = new Size(panel.Width - 30, 0);
+        m_LogMaxSize = new Size(panel.Width - 30, 0);
 
         string filePath = "ExcelMakerLog.txt";
         if (File.Exists(filePath)) {
             File.Delete(filePath);
         }
         var fileInfo = new FileInfo(filePath);
-        m_streamWriter = fileInfo.AppendText();
-        m_streamWriter.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\n");
-        m_streamWriter.Flush();
+        m_StreamWriter = fileInfo.AppendText();
+        m_StreamWriter.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\n");
+        m_StreamWriter.Flush();
     }
 
     public static void Clear() {
-        if (m_panel == null) {
+        if (m_Panel == null) {
             return;
         }
-        m_panel.Controls.Clear();
-        foreach (var item in m_logLabels) {
+        m_Panel.Controls.Clear();
+        foreach (var item in m_LogLabels) {
             item.Top = 0;
             item.Text = string.Empty;
             item.Height = 0;
         }
     }
 
-    private static Label popLogLabel(string content) {
+    private static Label PopLogLabel(string content) {
         Label label;
-        if (m_logLabels.Count >= kLogMax) {
-            label = m_logLabels.Dequeue();
+        if (m_LogLabels.Count >= kLogMax) {
+            label = m_LogLabels.Dequeue();
         }
         else {
             label = new Label();
             label.AutoSize = true;
-            label.MaximumSize = m_logMaxSize;
-            m_panel.Controls.Add(label);
+            label.MaximumSize = m_LogMaxSize;
+            m_Panel.Controls.Add(label);
         }
         string text = content + "\nTime:" + DateTime.Now.ToString("HH:mm:ss.fff");
         label.Text = text;
         label.Top = 0;
         int height = label.Height + kLogSpace;
-        foreach (var item in m_logLabels) {
+        foreach (var item in m_LogLabels) {
             item.Top += height;
         }
-        m_logLabels.Enqueue(label);
-        m_panel.Refresh();
+        m_LogLabels.Enqueue(label);
+        m_Panel.Refresh();
         return label;
     }
 
     public static void Log(string content) {
-        Label label = popLogLabel(content);
+        if (m_Panel == null) {
+            return;
+        }
+        Label label = PopLogLabel(content);
         label.ForeColor = Color.Black;
         //m_streamWriter.WriteLine("Log\t" + content);
         //m_streamWriter.Flush();
     }
 
     public static void LogWarning(string content) {
-        Label label = popLogLabel(content);
+        if (m_Panel == null) {
+            return;
+        }
+        Label label = PopLogLabel(content);
         label.ForeColor = Color.Blue;
-        m_streamWriter.WriteLine("Warn\t" + content);
-        m_streamWriter.Flush();
+        m_StreamWriter.WriteLine("Warn\t" + content);
+        m_StreamWriter.Flush();
     }
 
     public static void LogError(string content) {
-        Label label = popLogLabel(content);
+        if (m_Panel == null) {
+            return;
+        }
+        Label label = PopLogLabel(content);
         label.ForeColor = Color.Red;
-        m_streamWriter.WriteLine("Error\t" + content);
-        m_streamWriter.Flush();
+        m_StreamWriter.WriteLine("Error\t" + content);
+        m_StreamWriter.Flush();
     }
 
     public static void WriteError(string content) {
-        m_streamWriter.WriteLine("Error\t" + content);
-        m_streamWriter.Flush();
+        if (m_Panel == null) {
+            return;
+        }
+        m_StreamWriter.WriteLine("Error\t" + content);
+        m_StreamWriter.Flush();
     }
 }

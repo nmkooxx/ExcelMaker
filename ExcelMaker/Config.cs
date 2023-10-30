@@ -21,6 +21,9 @@ public class Config {
     public string serverCodePath = "Export/ServerCode";
     public string clientPath = "Export/Client";
     public string clientCodePath = "Export/ClientCode";
+    public List<string> selectNames = new List<string>();
+    public int width = 1200;
+    public int height = 900;
 }
 
 public class Combine {

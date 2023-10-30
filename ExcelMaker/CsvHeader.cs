@@ -122,7 +122,10 @@ namespace CsvHelper {
             "vector2fixed",
             "vector3fixed",
             "vector4fixed",
-            "couple"
+            "couple",
+            "float2",
+            "float3",
+            "float4"
         };
 
         public int arrayRank { get; private set; } = -1;
@@ -136,6 +139,9 @@ namespace CsvHelper {
                 arrayRank = 0;
                 jTokenType = JTokenType.Object;
                 switch (cellType.ToLower()) {
+                    case "float2":
+                    case "float3":
+                    case "float4":
                     case "vector2":
                     case "vector3":
                     case "vector4":
@@ -183,7 +189,7 @@ namespace CsvHelper {
                 case "ulong":
                 case "long":
                     jTokenType = JTokenType.Integer;
-                    break;                
+                    break;
                 case "fixed":
                 case "float":
                 case "double":
@@ -194,6 +200,9 @@ namespace CsvHelper {
                 case "localizekey":
                     jTokenType = JTokenType.String;
                     break;
+                case "float2":
+                case "float3":
+                case "float4":
                 case "vector2":
                 case "vector3":
                 case "vector4":
