@@ -438,7 +438,8 @@ public partial class Logic {
                 .Replace("      ",   "\t\t\t\t")
                 .Replace("    ",     "\t\t\t")
                 .Replace("  ",       "\t\t")
-                .Replace("}\n}", "}\n\t}")
+                .Replace("\n}", "\n\t}")
+                //.Replace("}\n}", "}\n\t}")
                 ;
         m_LuaBuilder.AppendLine($"\t[{csv["id"].ToString()}] = {text},");
 
