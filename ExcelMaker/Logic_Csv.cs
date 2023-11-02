@@ -357,8 +357,7 @@ public partial class Logic {
         
     }
 
-    private string kNeedParseStr = CsvConfig.delimiter + "1" + CsvConfig.delimiter;
-    private string kNoParseStr = CsvConfig.delimiter + CsvConfig.delimiter;
+    private string kNeedParseStr = CsvConfig.delimiter + "1";
     private void RowToCsv(char type, IRow row) {
         object value;
         string cellType;
@@ -444,8 +443,8 @@ public partial class Logic {
                     continue;
                 }
 
-                csvBuilder.AppendLine(PackLocalizeString(value.ToString(), false, rank - 1, out needParse));
-                csvBuilder.AppendLine(needParse ? kNeedParseStr : kNoParseStr);
+                csvBuilder.Append(PackLocalizeString(value.ToString(), false, rank - 1, out needParse));
+                csvBuilder.AppendLine(needParse ? kNeedParseStr : CsvConfig.delimiter);
             }
 
             return;
