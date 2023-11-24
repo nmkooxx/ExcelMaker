@@ -15,6 +15,7 @@ public sealed partial class @className : AbsDefine
     , IByteWriteable
 #endif
 {   #property#
+    public @className() : base() { }
 
     public @className(string name) : base(name) { }
 
@@ -32,18 +33,6 @@ public sealed partial class @className : AbsDefine
     public void Serialize(ByteWriter writer) {#ByteWrite#
     }
 #endif
-}
-
-public sealed partial class Define {
-    private static @className m_@class = null;
-    public static @className @class {
-        get {
-            if (null == m_@class) {
-                m_@class = new @className(""@fileName"");
-            }
-            return m_@class;
-        }
-    }
 }
 ";
     static string TemplateSimpeCase = @"

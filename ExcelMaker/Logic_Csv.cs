@@ -83,6 +83,9 @@ public partial class Logic {
                     if (m_FileName == "Localize" || m_FileName == "Text") {
                         for (int l = 0; l < m_LocalizeNames.Length; l++) {
                             var localizeName = m_LocalizeNames[l];
+                            if (string.IsNullOrEmpty(localizeName)) {
+                                continue;
+                            }
                             csvText = m_LocalizeBuilders[l].ToString();
                             csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
 
@@ -117,6 +120,9 @@ public partial class Logic {
             if (m_FileName == "Localize" || m_FileName == "Text") {
                 for (int l = 0; l < m_LocalizeNames.Length; l++) {
                     var localizeName = m_LocalizeNames[l];
+                    if (string.IsNullOrEmpty(localizeName)) {
+                        continue;
+                    }
                     csvText = m_LocalizeBuilders[l].ToString();
                     csvText = Regex.Replace(csvText, "(?<!\r)\n|\r\n", "\n");
 
@@ -143,7 +149,6 @@ public partial class Logic {
                 File.WriteAllText(localCsvPath, csvText, CsvConfig.encoding);
                 m_LogBuilder.AppendLine(path);
             }
-
 
             if (exportCode) {
                 switch (s_ExportLanguage) {

@@ -48,20 +48,7 @@ public sealed partial class @classNameReader : CfgReader<@classKey, @className> 
     protected override void InitKeys() {
         for (int i = 0; i < m_Keys.Length; i++) {
             m_ByteReader.Read(ref m_Keys[i]);
-            m_id2Indexs[m_Keys[i]] = i;
-        }
-    }
-}
-
-public sealed partial class @classPostfix {
-    private static @classNameReader m_@class = null;
-    public static @classNameReader @class {
-        get {
-            if (null == m_@class) {
-                m_@class = new @classNameReader();
-                m_@class.name = ""@fileName"";
-            }
-            return m_@class;
+            m_Id2Indexs[m_Keys[i]] = i;
         }
     }
 }
@@ -117,7 +104,7 @@ public sealed partial class @classPostfix {
     private @typeInt i_@name;
     public @typeString @name {
         get {
-            return CoreCfg.PathKey.Convert(i_@name, c_id);
+            return PathKey.Convert(i_@name, c_id);
         }
     }";
 
@@ -137,7 +124,7 @@ public sealed partial class @classPostfix {
                 return null;
             }
             if (null == t_@name) {
-                t_@name = CoreCfg.PathKey.Convert(i_@name, c_id);
+                t_@name = PathKey.Convert(i_@name, c_id);
             }
             return t_@name;
         }
