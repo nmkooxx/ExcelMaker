@@ -599,6 +599,8 @@ public partial class Logic {
                 }
                 m_CsvBuilder.Append(str);
                 break;
+            case "byte":
+            case "ushort":
             case "uint":
             case "ulong":
                 if (value is string stru) {
@@ -630,6 +632,7 @@ public partial class Logic {
                 }
                 m_CsvBuilder.Append(str);
                 break;
+            case "short":
             case "int":
             case "long":
             case "fixed":
@@ -638,7 +641,7 @@ public partial class Logic {
                     if (!string.IsNullOrWhiteSpace(stri)) {
                         str = stri;
                         //检查是否字符串格式的数字
-                        if (ulong.TryParse(stri, out var l)) {
+                        if (long.TryParse(stri, out var l)) {
 
                         }
                         else {

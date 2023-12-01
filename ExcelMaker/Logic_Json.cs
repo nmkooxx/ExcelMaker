@@ -171,14 +171,23 @@ public partial class Logic {
                 case "bool":
                     token = JToken.FromObject(Convert.ToBoolean(value));
                     break;
+                case "byte":
+                    token = JToken.FromObject(Convert.ToByte(value));
+                    break;
+                case "ushort":
+                    token = JToken.FromObject(Convert.ToUInt16(value));
+                    break;
                 case "uint":
                     token = JToken.FromObject(Convert.ToUInt32(value));
                     break;
-                case "int":
-                    token = JToken.FromObject(Convert.ToInt32(value));
-                    break;
                 case "ulong":
                     token = JToken.FromObject(Convert.ToUInt64(value));
+                    break;
+                case "short":
+                    token = JToken.FromObject(Convert.ToInt16(value));
+                    break;
+                case "int":
+                    token = JToken.FromObject(Convert.ToInt32(value));
                     break;
                 case "long":
                 case "fixed":
@@ -249,14 +258,23 @@ public partial class Logic {
                 case "bool":
                     token = JToken.FromObject(Convert.ToBoolean(value));
                     break;
+                case "byte":
+                    token = JToken.FromObject(Convert.ToByte(value));
+                    break;
+                case "ushort":
+                    token = JToken.FromObject(Convert.ToUInt16(value));
+                    break;
                 case "uint":
                     token = JToken.FromObject(Convert.ToUInt32(value));
                     break;
-                case "int":
-                    token = JToken.FromObject(Convert.ToInt32(value));
-                    break;
                 case "ulong":
                     token = JToken.FromObject(Convert.ToUInt64(value));
+                    break;
+                case "short":
+                    token = JToken.FromObject(Convert.ToInt16(value));
+                    break;
+                case "int":
+                    token = JToken.FromObject(Convert.ToInt32(value));
                     break;
                 case "long":
                 case "fixed":

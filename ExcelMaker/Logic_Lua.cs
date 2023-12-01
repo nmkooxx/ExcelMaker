@@ -325,14 +325,23 @@ public partial class Logic {
                 case "bool":
                     token = JToken.FromObject(Convert.ToBoolean(value));
                     break;
+                case "byte":
+                    token = JToken.FromObject(Convert.ToByte(value));
+                    break;
+                case "ushort":
+                    token = JToken.FromObject(Convert.ToUInt16(value));
+                    break;
                 case "uint":
                     token = JToken.FromObject(Convert.ToUInt32(value));
                     break;
-                case "int":
-                    token = JToken.FromObject(Convert.ToInt32(value));
-                    break;
                 case "ulong":
                     token = JToken.FromObject(Convert.ToUInt64(value));
+                    break;
+                case "short":
+                    token = JToken.FromObject(Convert.ToInt16(value));
+                    break;
+                case "int":
+                    token = JToken.FromObject(Convert.ToInt32(value));
                     break;
                 case "long":
                 case "fixed":
@@ -514,13 +523,15 @@ public partial class Logic {
                 m_LuaBuilder.Append(str);
                 m_LuaBuilder.AppendLine(",");
                 break;
+            case "byte":
+            case "ushort":
             case "uint":
             case "ulong":
                 if (value is string stru) {
                     if (!string.IsNullOrWhiteSpace(stru)) {
                         str = stru;
                         //检查是否字符串格式的数字
-                        if (ulong.TryParse(stru, out ulong ul)) {
+                        if (ulong.TryParse(stru, out var ul)) {
 
                         }
                         else {
@@ -546,6 +557,7 @@ public partial class Logic {
                 m_LuaBuilder.Append(str);
                 m_LuaBuilder.AppendLine(",");
                 break;
+            case "short":
             case "int":
             case "long":
             case "fixed":
@@ -554,7 +566,7 @@ public partial class Logic {
                     if (!string.IsNullOrWhiteSpace(stri)) {
                         str = stri;
                         //检查是否字符串格式的数字
-                        if (ulong.TryParse(stri, out var l)) {
+                        if (long.TryParse(stri, out var l)) {
 
                         }
                         else {
