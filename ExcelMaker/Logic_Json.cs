@@ -112,7 +112,7 @@ public partial class Logic {
                 token = token.First;
             }
             if (!header.CheckJToken(token)) {
-                LogError($"{m_FileName} Json数组内数据类型错误, index：{m_CurIndex} header:{header.name} type:{cellType} info:{info}" );
+                LogError($"{m_FileName} Json数组内数据类型错误, index：{m_CurIndex} header:{header.name} type:{cellType} J:{token} info:{info}" );
             }
         }
         catch (Exception e) {

@@ -26,7 +26,7 @@ namespace CsvHelper {
             if (title[0] == CsvConfig.ParseFlag)
             {
                 title = title.Substring(1);
-                return true;    
+                return true;
             }
             else
             {
@@ -125,7 +125,12 @@ namespace CsvHelper {
             "couple",
             "float2",
             "float3",
-            "float4"
+            "float4",
+            "int2",
+            "int3",
+            "int4",
+            "color",
+            "color32",
         };
 
         public int arrayRank { get; private set; } = -1;
@@ -145,12 +150,17 @@ namespace CsvHelper {
                     case "vector2":
                     case "vector3":
                     case "vector4":
+                    case "color":
                         ++arrayRank;
                         jTokenType = JTokenType.Float;
                         break;
+                    case "int2":
+                    case "int3":
+                    case "int4":
                     case "vector2int":
                     case "vector3int":
                     case "vector4int":
+                    case "color32":
                         ++arrayRank;
                         jTokenType = JTokenType.Integer;
                         break;
@@ -206,12 +216,17 @@ namespace CsvHelper {
                 case "vector2":
                 case "vector3":
                 case "vector4":
+                case "color":
                     ++arrayRank;
                     jTokenType = JTokenType.Float;
                     break;
+                case "int2":
+                case "int3":
+                case "int4":
                 case "vector2int":
                 case "vector3int":
                 case "vector4int":
+                case "color32":
                     ++arrayRank;
                     jTokenType = JTokenType.Integer;
                     break;
