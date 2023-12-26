@@ -263,6 +263,7 @@ public partial class Logic {
         int offset = m_Config.rootPath.Length + 1;
         //var paths = Directory.GetFiles(m_config.rootPath, "*.*", SearchOption.AllDirectories).Where(s => s.EndsWith(".xlsx") || s.EndsWith(".csv"));
         var paths = Directory.GetFiles(m_Config.rootPath, "*.xlsx", SearchOption.AllDirectories);
+        Array.Sort(paths);
         foreach (var path in paths) {
             if (path.IndexOf('~') >= 0) {
                 continue;
