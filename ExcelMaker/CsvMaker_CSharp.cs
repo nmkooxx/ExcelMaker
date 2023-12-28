@@ -89,8 +89,11 @@ public sealed partial class @classNameReader : CfgReader<@classKey, @className> 
     }
     #endif
     private @typeInt i_@name;
-    public @typeInt @name {
+    public @typeInt @nameInt {
         get { return i_@name; }
+    }
+    public @typeString @name {
+        get { return Localize.Str(i_@name); }
     }";
 
     static string TemplatePathKeyProperty = @"
